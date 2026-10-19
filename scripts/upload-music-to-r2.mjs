@@ -44,11 +44,16 @@ function loadEnv() {
 
 loadEnv();
 
-const accountId = process.env.R2_ACCOUNT_ID;
-const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-const bucketName = process.env.R2_BUCKET_NAME;
-const publicUrl = process.env.R2_PUBLIC_URL?.replace(/\/+$/, "") || "";
+const rawAccountId = process.env.R2_ACCOUNT_ID?.trim() || "";
+const accountId = rawAccountId
+  .replace(/^https?:\/\//i, "")
+  .replace(/\.r2\.cloudflarestorage\.com.*$/i, "")
+  .replace(/\/+$/, "")
+  .trim();
+const accessKeyId = process.env.R2_ACCESS_KEY_ID?.trim();
+const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY?.trim();
+const bucketName = process.env.R2_BUCKET_NAME?.trim();
+const publicUrl = process.env.R2_PUBLIC_URL?.replace(/\/+$/, "").trim() || "";
 
 console.log("\n========================================================");
 console.log("   CLOUDFLARE R2 MUSIC UPLOADER - TOMATODEVS");

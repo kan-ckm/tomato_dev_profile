@@ -43,6 +43,18 @@ export function getR2BucketName(): string {
 }
 
 /**
+ * Chuẩn hóa Account ID (tự động loại bỏ https:// hoặc .r2.cloudflarestorage.com nếu người dùng vô tình dán cả URL)
+ */
+export function getCleanR2AccountId(): string {
+  const raw = process.env.R2_ACCOUNT_ID?.trim() || "";
+  return raw
+    .replace(/^https?:\/\//i, "")
+    .replace(/\.r2\.cloudflarestorage\.com.*$/i, "")
+    .replace(/\/+$/, "")
+    .trim();
+}
+
+/**
  * Khởi tạo singleton S3Client kết nối tới Cloudflare R2
  */
 export function getR2Client(): S3Client {
@@ -50,9 +62,9 @@ export function getR2Client(): S3Client {
     return r2ClientInstance;
   }
 
-  const accountId = process.env.R2_ACCOUNT_ID;
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+  const accountId = getCleanR2AccountId();
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID?.trim();
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY?.trim();
 
   if (!accountId || !accessKeyId || !secretAccessKey) {
     throw new Error(
