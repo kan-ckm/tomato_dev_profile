@@ -92,6 +92,12 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       audioRef.current.volume = validVol;
     }
 
+    // Khởi tạo ngay bài hát mặc định để audio.src không bao giờ bị rỗng
+    const initialTrack = fallbackPlaylist.find((t) => t.file === DEFAULT_TRACK_FILE) || fallbackPlaylist[0];
+    if (audioRef.current && initialTrack && !audioRef.current.src) {
+      audioRef.current.src = initialTrack.url || `/assets/music/${encodeURIComponent(initialTrack.file)}`;
+    }
+
     const initTrackFromStorage = (tracks: MusicTrack[]) => {
       const savedFile = localStorage.getItem("music_track_file");
       const savedTrackIdx = localStorage.getItem("music_track_index");
@@ -116,13 +122,25 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       setCurrentTrackIndex(resolvedIndex);
       const track = tracks[resolvedIndex];
       if (track && audioRef.current) {
-        audioRef.current.src = track.url || `/assets/music/${encodeURIComponent(track.file)}`;
+        const targetSrc = track.url || `/assets/music/${encodeURIComponent(track.file)}`;
+        if (audioRef.current.src !== targetSrc) {
+          audioRef.current.src = targetSrc;
+        }
+
         const savedTime = localStorage.getItem("music_current_time");
         if (savedTime !== null) {
           const parsedTime = parseFloat(savedTime);
-          if (!isNaN(parsedTime) && isFinite(parsedTime)) {
-            audioRef.current.currentTime = parsedTime;
-            setCurrentTime(parsedTime);
+          if (!isNaN(parsedTime) && isFinite(parsedTime) && parsedTime >= 0) {
+            const onLoaded = () => {
+              if (audioRef.current && isFinite(audioRef.current.duration)) {
+                if (parsedTime < audioRef.current.duration) {
+                  audioRef.current.currentTime = parsedTime;
+                  setCurrentTime(parsedTime);
+                }
+              }
+              audioRef.current?.removeEventListener("loadedmetadata", onLoaded);
+            };
+            audioRef.current.addEventListener("loadedmetadata", onLoaded);
           }
         }
       }
@@ -212,20 +230,28 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
     const audio = audioRef.current;
     if (!audio) return;
 
+    if (!audio.src) {
+      loadAndPlayTrack(currentTrackIndex, true);
+      return;
+    }
+
     if (audio.paused) {
       isManuallyPausedRef.current = false;
       localStorage.setItem("music_paused", "false");
       audio
         .play()
         .then(() => setIsPlaying(true))
-        .catch(() => {});
+        .catch((err) => {
+          console.warn("[MusicPlayer] Play failed, attempting reload:", err);
+          loadAndPlayTrack(currentTrackIndex, true);
+        });
     } else {
       isManuallyPausedRef.current = true;
       localStorage.setItem("music_paused", "true");
       audio.pause();
       setIsPlaying(false);
     }
-  }, []);
+  }, [currentTrackIndex, loadAndPlayTrack]);
 
   const nextTrack = useCallback(() => {
     if (playlist.length === 0) return;
@@ -327,6 +353,14 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
         onPause={() => setIsPlaying(false)}
         onEnded={nextTrack}
         onError={() => {
+          const audio = audioRef.current;
+          const track = playlist[currentTrackIndex];
+          if (audio && track && track.url && audio.src === track.url) {
+            console.warn("[MusicPlayer] R2 CDN stream failed, falling back to local file:", track.file);
+            audio.src = `/assets/music/${encodeURIComponent(track.file)}`;
+            audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+            return;
+          }
           setIsPlaying(false);
         }}
       />
