@@ -1,0 +1,88 @@
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  poweredByHeader: false,
+
+  // Ensure music files in public/assets/music are bundled/accessible for serverless API routes on Vercel
+  outputFileTracingIncludes: {
+    "/api/music": ["./public/assets/music/**/*"],
+  },
+
+  // Backward-compatible redirects for legacy .html URLs
+  async redirects() {
+    return [
+      {
+        source: "/index.html",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/projects.html",
+        destination: "/projects",
+        permanent: true,
+      },
+      {
+        source: "/clock.html",
+        destination: "/clock",
+        permanent: true,
+      },
+    ];
+  },
+
+  // Security & Caching HTTP Headers
+  async headers() {
+    return [
+      {
+        source: "/assets/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        source: "/(.*)",
+        headers: [
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "X-Frame-Options",
+            value: "SAMEORIGIN",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+          },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains; preload",
+          },
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "font-src 'self' https://fonts.gstatic.com data:",
+              "img-src 'self' data: blob: https:",
+              "media-src 'self' data: blob:",
+              "connect-src 'self' https://*.upstash.io",
+              "frame-ancestors 'self'",
+              "base-uri 'self'",
+              "form-action 'self'",
+            ].join("; "),
+          },
+        ],
+      },
+    ];
+  },
+};
+
+export default nextConfig;
