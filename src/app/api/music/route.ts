@@ -4,12 +4,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { fallbackPlaylist } from "@/config/music.config";
 import { checkRateLimit, isSafeMp3Filename } from "@/lib/security";
 import { isR2Configured, listR2Objects, getR2PublicUrl } from "@/lib/r2";
+import { getCachedMusicPlaylist, setCachedMusicPlaylist } from "@/lib/redis";
 import { MusicTrack } from "@/types";
 
 /**
  * GET /api/music
- * Trả về danh sách các bản nhạc MP3 từ Cloudflare R2 (nếu đã cấu hình)
- * hoặc quét thư mục `public/assets/music` cục bộ.
+ * Trả về danh sách các bản nhạc MP3:
+ * 1. Đọc từ Redis Cache (L1 RAM + L2 Docker/Upstash Redis) — Phản hồi < 1ms
+ * 2. Hoặc lấy từ Cloudflare R2 Storage (và tự động lưu vào Redis Cache 10 phút)
+ * 3. Hoặc quét thư mục `public/assets/music` cục bộ
  * 
  * Bảo mật:
  * - Chống Path Traversal và lọc chặt định dạng .mp3
@@ -25,10 +28,25 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // 1. Kiểm tra Cloudflare R2 Storage (ưu tiên hàng đầu)
+  const forceRefresh = request.nextUrl.searchParams.get("refresh") === "1";
+
+  // 1. Kiểm tra Redis Cache trước tiên (giảm 99.9% số lần gọi S3 ListObjectsV2 lên Cloudflare R2)
+  if (!forceRefresh) {
+    const cachedTracks = await getCachedMusicPlaylist();
+    if (cachedTracks && cachedTracks.length > 0) {
+      return NextResponse.json(cachedTracks, {
+        status: 200,
+        headers: {
+          "X-Cache": "HIT",
+          "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+        },
+      });
+    }
+  }
+
+  // 2. Kiểm tra Cloudflare R2 Storage (nếu chưa có trong Redis Cache)
   if (isR2Configured()) {
     try {
-      // Tìm nhạc trong prefix "music/" hoặc ở thư mục gốc bucket
       let r2Objects = await listR2Objects("music/");
       if (!r2Objects || r2Objects.length === 0) {
         r2Objects = await listR2Objects("");
@@ -64,9 +82,13 @@ export async function GET(request: NextRequest) {
           };
         });
 
+        // Lưu danh sách nhạc R2 vào Redis Cache (10 phút)
+        await setCachedMusicPlaylist(r2Tracks);
+
         return NextResponse.json(r2Tracks, {
           status: 200,
           headers: {
+            "X-Cache": "MISS",
             "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
           },
         });
@@ -76,7 +98,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 2. Quét thư mục tĩnh cục bộ public/assets/music nếu chưa có R2
+  // 3. Quét thư mục tĩnh cục bộ public/assets/music nếu chưa có R2
   try {
     const publicMusicDir = path.join(process.cwd(), "public", "assets", "music");
     const legacyMusicDir = path.join(process.cwd(), "assets", "music");
@@ -123,15 +145,16 @@ export async function GET(request: NextRequest) {
         };
       });
 
-    return NextResponse.json(
-      musicFiles.length > 0 ? musicFiles : fallbackPlaylist,
-      {
-        status: 200,
-        headers: {
-          "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
-        },
-      }
-    );
+    const resultTracks = musicFiles.length > 0 ? musicFiles : fallbackPlaylist;
+    await setCachedMusicPlaylist(resultTracks);
+
+    return NextResponse.json(resultTracks, {
+      status: 200,
+      headers: {
+        "X-Cache": "LOCAL",
+        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+      },
+    });
   } catch (error) {
     console.error("[API /api/music] Internal error:", error);
     return NextResponse.json(fallbackPlaylist, {

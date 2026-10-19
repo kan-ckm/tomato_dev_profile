@@ -1,0 +1,52 @@
+services:
+  # 1. Core Redis 7 Server (Tối ưu hóa bộ nhớ LRU & lưu trữ bền vững AOF)
+  redis:
+    image: redis:7.4-alpine
+    container_name: tomatodevs-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --tcp-keepalive 60
+      --save 60 1
+      --loglevel notice
+    volumes:
+      - tomato_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - tomato-redis-net
+
+  # 2. Serverless Redis HTTP Proxy (Giúp @upstash/redis kết nối trực tiếp vào Docker Redis cục bộ)
+  redis-http:
+    image: hiett/serverless-redis-http:latest
+    container_name: tomatodevs-redis-http
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8079:80"
+    environment:
+      SRH_MODE: env
+      SRH_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:-tomato_local_redis_secret_token}
+      SRH_CONNECTION_STRING: "redis://redis:6379"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - tomato-redis-net
+
+volumes:
+  tomato_redis_data:
+    name: tomatodevs_redis_data
+
+networks:
+  tomato-redis-net:
+    name: tomatodevs_redis_net
+    driver: bridge

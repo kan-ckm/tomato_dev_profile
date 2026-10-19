@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { profileConfig } from "@/config/profile.config";
-import { getCachedTikTokStats, setCachedTikTokStats } from "@/lib/redis";
+import {
+  getCachedTikTokStats,
+  setCachedTikTokStats,
+  isTikTokCacheFresh,
+  acquireTikTokRefreshLock,
+} from "@/lib/redis";
 import { checkRateLimit, getCorsHeaders } from "@/lib/security";
 import { TikTokStatsResponse } from "@/types";
 
@@ -42,7 +47,7 @@ async function scrapeTikTokProfile(): Promise<{
     },
     redirect: "follow",
     signal: AbortSignal.timeout(8000),
-    next: { revalidate: 3600 },
+    cache: "no-store",
   });
 
   if (!res.ok) {
@@ -108,6 +113,23 @@ async function scrapeTikTokProfile(): Promise<{
   return { followersRaw, likesRaw };
 }
 
+/**
+ * Làm mới dữ liệu TikTok ngầm trong nền (Stale-While-Revalidate) có khóa phân tán Redis
+ */
+async function refreshTikTokInBackground(): Promise<void> {
+  const locked = await acquireTikTokRefreshLock();
+  if (!locked) return;
+
+  try {
+    const { followersRaw, likesRaw } = await scrapeTikTokProfile();
+    if (followersRaw > 0) {
+      await setCachedTikTokStats(followersRaw, likesRaw, true);
+    }
+  } catch (err) {
+    console.warn("[TikTok Stats] Background refresh failed:", err);
+  }
+}
+
 export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, {
     status: 204,
@@ -118,7 +140,7 @@ export async function OPTIONS(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const corsHeaders = getCorsHeaders(request);
 
-  const rateLimit = checkRateLimit(request, 30, 60_000);
+  const rateLimit = checkRateLimit(request, 60, 60_000);
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: "Too many requests. Please try again later." },
@@ -126,11 +148,38 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const forceRefresh = request.nextUrl.searchParams.get("refresh") === "1";
+
   try {
-    // 1. Lấy dữ liệu cache từ Upstash Redis (hoặc RAM cache)
+    // 1. Ưu tiên đọc từ Redis Cache trước (Cache-First < 1ms)
     const cachedFollower = await getCachedTikTokStats();
 
-    // 2. Lấy dữ liệu mới từ TikTok
+    if (cachedFollower && !forceRefresh) {
+      // Nếu cache đã quá 30 phút (Stale), trả về ngay cache cho user không phải đợi
+      // đồng thời kích hoạt làm mới ngầm trong nền (Stale-While-Revalidate)
+      if (!isTikTokCacheFresh(cachedFollower)) {
+        void refreshTikTokInBackground();
+      }
+
+      return NextResponse.json(
+        {
+          followers_raw: cachedFollower.followers,
+          likes_raw: cachedFollower.likes,
+          source: "cached",
+          updated_at: new Date(cachedFollower.fetchedAt).toISOString(),
+        } satisfies TikTokStatsResponse,
+        {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            "X-Cache": isTikTokCacheFresh(cachedFollower) ? "HIT-FRESH" : "HIT-STALE",
+            "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=86400",
+          },
+        }
+      );
+    }
+
+    // 2. Nếu chưa có cache (Cold Start) hoặc yêu cầu ?refresh=1, tiến hành lấy mới
     let freshFollowers = 0;
     let freshLikes = 0;
     try {
@@ -141,12 +190,15 @@ export async function GET(request: NextRequest) {
       console.warn("[TikTok Stats] Live scrape failed, using cache/fallback:", scrapeErr);
     }
 
-    // 3. Nếu lấy được dữ liệu mới hợp lệ, cập nhật lên Upstash Redis
+    // 3. Nếu lấy được dữ liệu mới hợp lệ, lưu ngay vào Redis
     if (freshFollowers > 0) {
-      await setCachedTikTokStats(freshFollowers, freshLikes);
+      await setCachedTikTokStats(freshFollowers, freshLikes, true);
+    } else if (!cachedFollower) {
+      // Lưu tạm giá trị fallback vào Redis để tránh các request tiếp theo bị chậm nếu TikTok chặn IP
+      await setCachedTikTokStats(FALLBACK.followers_raw, FALLBACK.likes_raw, true);
     }
 
-    // 4. Tổng hợp kết quả trả về (Ưu tiên: Live TikTok -> Redis Cache -> Fallback)
+    // 4. Tổng hợp kết quả trả về
     const data: TikTokStatsResponse = {
       followers_raw:
         freshFollowers || (cachedFollower ? cachedFollower.followers : FALLBACK.followers_raw),
@@ -160,7 +212,8 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         ...corsHeaders,
-        "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400",
+        "X-Cache": "MISS",
+        "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=86400",
       },
     });
   } catch (err) {
@@ -173,7 +226,7 @@ export async function GET(request: NextRequest) {
           followers_raw: cachedFollower.followers,
           likes_raw: cachedFollower.likes,
           source: "cached",
-          updated_at: new Date().toISOString(),
+          updated_at: new Date(cachedFollower.fetchedAt).toISOString(),
         } satisfies TikTokStatsResponse,
         {
           status: 200,

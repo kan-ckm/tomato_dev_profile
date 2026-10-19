@@ -150,6 +150,20 @@ async function run() {
     }
   }
 
+  // Tự động làm mới cache danh sách nhạc trên Redis nếu đang chạy
+  const redisUrl = process.env.UPSTASH_REDIS_REST_URL?.trim();
+  const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+  if (redisUrl && redisToken && !redisUrl.includes("your-redis-instance")) {
+    try {
+      const { Redis } = await import("@upstash/redis");
+      const redis = new Redis({ url: redisUrl, token: redisToken });
+      await redis.del("tomato:r2:music_playlist");
+      console.log("🔄 [REDIS] Đã xóa cache cũ, danh sách nhạc mới sẽ có hiệu lực ngay lập tức!");
+    } catch {
+      // Bỏ qua nếu Redis chưa bật
+    }
+  }
+
   console.log("========================================================");
   console.log(`🎉 HOÀN TẤT: Đã đồng bộ ${successCount}/${files.length} file nhạc lên Cloudflare R2!`);
   console.log("========================================================\n");

@@ -11,6 +11,7 @@ Chào mừng bạn đến với tài liệu kỹ thuật của dự án **Tomato
 3. [**Hướng dẫn mở rộng & Tùy chỉnh (`CUSTOMIZATION.md`)**](./CUSTOMIZATION.md)
 4. [**Cơ chế bảo mật & Cấu hình môi trường (`SECURITY.md`)**](./SECURITY.md)
 5. [**Hướng dẫn Thiết lập & Kết nối Cloudflare R2 (`CLOUDFLARE_R2.md`)**](./CLOUDFLARE_R2.md)
+6. [**Hướng dẫn Thiết lập & Tối ưu hóa Redis trên Docker (`REDIS_DOCKER.md`)**](./REDIS_DOCKER.md)
 
 ---
 
