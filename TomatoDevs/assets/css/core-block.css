@@ -1,0 +1,22 @@
+#core-block {
+  position: fixed;
+  top: clamp(-40px, -3vw, -20px);
+  right: clamp(-45px, -3vw, -25px);
+  z-index: 9997;
+  width: min(380px, 35vw);
+  height: min(380px, 35vw);
+  pointer-events: none;
+  background: transparent;
+  aspect-ratio: 1;
+}
+
+#core-block canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+  pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+  #core-block { display: none; }
+}
