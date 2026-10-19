@@ -10,6 +10,7 @@ Chào mừng bạn đến với tài liệu kỹ thuật của dự án **Tomato
 2. [**Kiến trúc hệ thống & Luồng dữ liệu (`ARCHITECTURE.md`)**](./ARCHITECTURE.md)
 3. [**Hướng dẫn mở rộng & Tùy chỉnh (`CUSTOMIZATION.md`)**](./CUSTOMIZATION.md)
 4. [**Cơ chế bảo mật & Cấu hình môi trường (`SECURITY.md`)**](./SECURITY.md)
+5. [**Hướng dẫn Thiết lập & Kết nối Cloudflare R2 (`CLOUDFLARE_R2.md`)**](./CLOUDFLARE_R2.md)
 
 ---
 

@@ -37,6 +37,8 @@ export interface MusicTrack {
   name: string;
   artist: string;
   file: string;
+  url?: string;
+  size?: number;
 }
 
 export interface TikTokStatsResponse {

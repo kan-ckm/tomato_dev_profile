@@ -3,15 +3,18 @@ import path from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { fallbackPlaylist } from "@/config/music.config";
 import { checkRateLimit, isSafeMp3Filename } from "@/lib/security";
+import { isR2Configured, listR2Objects, getR2PublicUrl } from "@/lib/r2";
 import { MusicTrack } from "@/types";
 
 /**
  * GET /api/music
- * Quét thư mục `public/assets/music` để trả về danh sách các bản nhạc MP3.
+ * Trả về danh sách các bản nhạc MP3 từ Cloudflare R2 (nếu đã cấu hình)
+ * hoặc quét thư mục `public/assets/music` cục bộ.
+ * 
  * Bảo mật:
  * - Chống Path Traversal và lọc chặt định dạng .mp3
- * - Không bao giờ làm lộ đường dẫn hệ thống (process.cwd()) khi xảy ra lỗi
- * - Hỗ trợ Rate Limiting và Cache-Control tối ưu
+ * - Không bao giờ làm lộ đường dẫn hệ thống nội bộ (process.cwd()) khi có sự cố
+ * - Rate Limiting & Cache-Control tối ưu
  */
 export async function GET(request: NextRequest) {
   const rateLimit = checkRateLimit(request, 60, 60_000);
@@ -22,6 +25,58 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // 1. Kiểm tra Cloudflare R2 Storage (ưu tiên hàng đầu)
+  if (isR2Configured()) {
+    try {
+      // Tìm nhạc trong prefix "music/" hoặc ở thư mục gốc bucket
+      let r2Objects = await listR2Objects("music/");
+      if (!r2Objects || r2Objects.length === 0) {
+        r2Objects = await listR2Objects("");
+      }
+
+      const mp3Objects = (r2Objects || []).filter(
+        (obj) => obj.Key && obj.Key.toLowerCase().endsWith(".mp3")
+      );
+
+      if (mp3Objects.length > 0) {
+        const r2Tracks: MusicTrack[] = mp3Objects.map((obj) => {
+          const key = obj.Key!;
+          const filename = key.split("/").pop() || key;
+          let name = filename.replace(/\.mp3$/i, "");
+          let artist = "Unknown";
+
+          if (name.includes(" - ")) {
+            const parts = name.split(" - ");
+            artist = parts[0].trim();
+            name = parts.slice(1).join(" - ").trim();
+          } else if (name.includes(" x ")) {
+            const parts = name.split(" x ");
+            artist = parts[0].trim();
+            name = parts.slice(1).join(" x ").trim();
+          }
+
+          return {
+            name,
+            artist,
+            file: filename,
+            url: getR2PublicUrl(key),
+            size: obj.Size,
+          };
+        });
+
+        return NextResponse.json(r2Tracks, {
+          status: 200,
+          headers: {
+            "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+          },
+        });
+      }
+    } catch (r2Error) {
+      console.warn("[API /api/music] Cloudflare R2 query failed, falling back to local files:", r2Error);
+    }
+  }
+
+  // 2. Quét thư mục tĩnh cục bộ public/assets/music nếu chưa có R2
   try {
     const publicMusicDir = path.join(process.cwd(), "public", "assets", "music");
     const legacyMusicDir = path.join(process.cwd(), "assets", "music");
@@ -33,7 +88,6 @@ export async function GET(request: NextRequest) {
       : null;
 
     if (!musicDir) {
-      // Trả về danh sách dự phòng thay vì làm lộ đường dẫn server nội bộ
       return NextResponse.json(fallbackPlaylist, {
         status: 200,
         headers: {

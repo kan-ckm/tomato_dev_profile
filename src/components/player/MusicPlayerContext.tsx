@@ -116,7 +116,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       setCurrentTrackIndex(resolvedIndex);
       const track = tracks[resolvedIndex];
       if (track && audioRef.current) {
-        audioRef.current.src = `/assets/music/${encodeURIComponent(track.file)}`;
+        audioRef.current.src = track.url || `/assets/music/${encodeURIComponent(track.file)}`;
         const savedTime = localStorage.getItem("music_current_time");
         if (savedTime !== null) {
           const parsedTime = parseFloat(savedTime);
@@ -190,8 +190,8 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       localStorage.setItem("music_track_file", track.file);
 
       const audio = audioRef.current;
-      const targetSrc = `/assets/music/${encodeURIComponent(track.file)}`;
-      if (!audio.src.endsWith(encodeURIComponent(track.file))) {
+      const targetSrc = track.url || `/assets/music/${encodeURIComponent(track.file)}`;
+      if (audio.src !== targetSrc && !audio.src.endsWith(encodeURIComponent(track.file))) {
         audio.src = targetSrc;
         setCurrentTime(0);
       }
