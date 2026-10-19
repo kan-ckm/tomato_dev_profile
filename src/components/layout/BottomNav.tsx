@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,7 @@ const NAV_ITEMS: NavItemConfig[] = [
     label: "Overview",
     icon: (
       <svg
-        className="h-[22px] w-[22px] stroke-current lg:hidden"
+        className="h-[18px] w-[18px] stroke-current"
         viewBox="0 0 24 24"
         fill="none"
         strokeWidth="2"
@@ -34,7 +34,7 @@ const NAV_ITEMS: NavItemConfig[] = [
     label: "Projects",
     icon: (
       <svg
-        className="h-[22px] w-[22px] stroke-current lg:hidden"
+        className="h-[18px] w-[18px] stroke-current"
         viewBox="0 0 24 24"
         fill="none"
         strokeWidth="2"
@@ -52,7 +52,7 @@ const NAV_ITEMS: NavItemConfig[] = [
     label: "Clock",
     icon: (
       <svg
-        className="h-[22px] w-[22px] stroke-current lg:hidden"
+        className="h-[18px] w-[18px] stroke-current"
         viewBox="0 0 24 24"
         fill="none"
         strokeWidth="2"
@@ -69,15 +69,6 @@ const NAV_ITEMS: NavItemConfig[] = [
 
 export function BottomNav() {
   const pathname = usePathname();
-  const [expanded, setExpanded] = useState(false);
-
-  useEffect(() => {
-    const handleDocumentClick = () => {
-      setExpanded(false);
-    };
-    document.addEventListener("click", handleDocumentClick);
-    return () => document.removeEventListener("click", handleDocumentClick);
-  }, []);
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/" || pathname === "/index.html";
@@ -88,78 +79,27 @@ export function BottomNav() {
     <nav
       id="bottom-nav"
       aria-label="Main Navigation"
-      onClick={(e) => e.stopPropagation()}
-      className={cn(
-        "bottom-nav fixed bottom-6 left-3.5 z-[9998] flex items-center overflow-hidden rounded-[18px] border border-white/[0.08] bg-[rgba(15,15,20,0.35)] shadow-[0_15px_40px_rgba(0,0,0,0.4)] backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]",
-        "max-lg:flex-col-reverse",
-        expanded
-          ? "gap-2 max-lg:max-h-[400px] max-lg:max-w-[54px] max-lg:p-0 lg:max-h-[54px] lg:max-w-[500px] lg:pr-3"
-          : "gap-0 max-h-[54px] max-w-[54px] p-0"
-      )}
+      className="bottom-nav fixed bottom-6 left-4 z-[9998] flex items-center gap-1.5 rounded-full border border-white/15 bg-black/70 p-1.5 shadow-[0_15px_35px_rgba(0,0,0,0.5),0_0_20px_rgba(255,255,255,0.06)] backdrop-blur-xl transition-all duration-300 md:left-6"
     >
-      <button
-        id="nav-toggle"
-        type="button"
-        aria-label="Toggle Menu"
-        onClick={(e) => {
-          e.stopPropagation();
-          setExpanded((prev) => !prev);
-        }}
-        className="relative z-[2] flex h-[54px] w-[54px] shrink-0 cursor-pointer items-center justify-center rounded-[18px] border-none bg-transparent transition-colors duration-300 hover:bg-white/[0.08]"
-      >
-        <div className="relative flex h-[14px] w-5 flex-col justify-between">
-          <span
+      {NAV_ITEMS.map((item) => {
+        const active = isActive(item.href);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            title={item.label}
             className={cn(
-              "h-[2px] w-full rounded-[2px] bg-accent transition-all duration-300",
-              expanded && "translate-y-[6px] rotate-45"
+              "nav-item relative flex items-center gap-2 rounded-full px-3.5 py-2 font-display text-[0.8rem] font-semibold tracking-[0.03em] no-underline transition-all duration-200",
+              active
+                ? "bg-white text-black shadow-[0_2px_12px_rgba(255,255,255,0.35)]"
+                : "text-muted hover:bg-white/10 hover:text-white"
             )}
-          />
-          <span
-            className={cn(
-              "h-[2px] w-full rounded-[2px] bg-accent transition-all duration-300",
-              expanded && "-translate-x-2.5 opacity-0"
-            )}
-          />
-          <span
-            className={cn(
-              "h-[2px] w-full rounded-[2px] bg-accent transition-all duration-300",
-              expanded && "-translate-y-[6px] -rotate-45"
-            )}
-          />
-        </div>
-      </button>
-
-      <div
-        className={cn(
-          "flex whitespace-nowrap transition-all duration-300",
-          "max-lg:w-full max-lg:flex-col max-lg:items-center max-lg:gap-2.5 lg:gap-2",
-          expanded
-            ? "pointer-events-auto translate-x-0 translate-y-0 opacity-100"
-            : "pointer-events-none opacity-0 max-lg:translate-y-5 lg:-translate-x-5"
-        )}
-      >
-        {NAV_ITEMS.map((item) => {
-          const active = isActive(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              title={item.label}
-              onClick={() => setExpanded(false)}
-              className={cn(
-                "nav-item relative flex items-center justify-center gap-2 font-display text-xs font-semibold uppercase tracking-[0.05em] no-underline transition-all duration-300",
-                "max-lg:h-[54px] max-lg:w-[54px] max-lg:rounded-[18px] max-lg:p-0 lg:rounded-xl lg:px-[18px] lg:py-2.5",
-                active
-                  ? "text-white bg-transparent [&_svg]:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] lg:after:absolute lg:after:bottom-1.5 lg:after:left-1/2 lg:after:h-[2px] lg:after:w-3.5 lg:after:-translate-x-1/2 lg:after:rounded-[10px] lg:after:bg-white lg:after:shadow-[0_0_8px_rgba(255,255,255,0.8)]"
-                  : "text-muted hover:bg-white/[0.08] hover:text-white"
-              )}
-            >
-              {item.icon}
-              <span className="max-lg:hidden">{item.label}</span>
-            </Link>
-          );
-        })}
-      </div>
+          >
+            {item.icon}
+            <span className="font-medium">{item.label}</span>
+          </Link>
+        );
+      })}
     </nav>
   );
 }
