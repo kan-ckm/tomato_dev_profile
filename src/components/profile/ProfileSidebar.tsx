@@ -74,14 +74,14 @@ export function ProfileSidebar() {
           ) : (
             <div
               className="h-full w-full"
-              style={{ background: "linear-gradient(135deg,#1a0533,#0d0d1a)" }}
+              style={{ background: "linear-gradient(135deg,#18181b,#09090b)" }}
             />
           )}
           <div
             className="pointer-events-none absolute inset-0"
             style={{
               background:
-                "linear-gradient(to bottom, rgba(11,11,15,0) 0%, rgba(11,11,15,0.3) 60%, rgba(11,11,15,0.95) 100%)",
+                "linear-gradient(to bottom, rgba(5,5,8,0) 0%, rgba(5,5,8,0.3) 60%, rgba(5,5,8,0.95) 100%)",
             }}
             aria-hidden="true"
           />

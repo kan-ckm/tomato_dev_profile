@@ -11,7 +11,7 @@ export const profileConfig: ProfileConfig = {
   discordUrl: "https://discord.com/users/883689446422220821",
   avatarSrc: "/assets/avatar/avatar.jpg",
   fallbackAvatarSrc: "/assets/images/og-image.png",
-  coverSrc: "/assets/images/cover.webp",
+  coverSrc: "/assets/images/background_avartar.jpg",
   statusText: "Online",
   tiktok: {
     displayName: "Tomato Dev",
