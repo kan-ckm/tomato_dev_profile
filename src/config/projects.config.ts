@@ -2,10 +2,23 @@ import { ProjectItem } from "@/types";
 
 /**
  * Danh sách dự án hiển thị tại trang /projects.
- * Hiện tại đang để trống (null/empty) theo yêu cầu.
- * Khi cần thêm dự án, bạn chỉ cần mở comment mẫu bên dưới hoặc thêm object ProjectItem vào mảng.
+ * Template mẫu dự án Web:
  */
-export const projectsConfig: ProjectItem[] = [];
+export const projectsConfig: ProjectItem[] = [
+  {
+    id: "my-web-project",
+    title: "My Web App",
+    description:
+      "A modern, responsive web application built with Next.js, TypeScript and Tailwind CSS.",
+    badgeType: "web",
+    badgeLabel: "Web App",
+    glowVariant: "web",
+    iconSrc: "/assets/images/og-image.png",
+    languages: ["TypeScript", "Next.js", "React"],
+    repoUrl: "https://github.com/kan-ckm",
+    buttonLabel: "Visit Website",
+  },
+];
 
 /*
 // Mẫu dự án cũ để khôi phục khi cần:

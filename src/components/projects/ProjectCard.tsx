@@ -3,6 +3,21 @@ import { ProjectBadgeType, ProjectGlowVariant, ProjectItem } from "@/types";
 import { cn } from "@/lib/utils";
 
 function PlatformBadgeIcon({ type }: { type: ProjectBadgeType }) {
+  if (type === "web") {
+    return (
+      <svg
+        className="h-3 w-3 fill-none stroke-current"
+        viewBox="0 0 24 24"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <line x1="2" y1="12" x2="22" y2="12" />
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+      </svg>
+    );
+  }
   if (type === "proxy") {
     return (
       <svg className="h-3 w-3 fill-current" viewBox="0 0 24 24" fill="none">
@@ -42,6 +57,7 @@ function PlatformBadgeIcon({ type }: { type: ProjectBadgeType }) {
 }
 
 const GLOW_CLASS_MAP: Record<ProjectGlowVariant, string> = {
+  web: "glow-web",
   freesia: "glow-freesia",
   ecolens: "glow-ecolens",
   sudden: "glow-sudden",
@@ -49,6 +65,7 @@ const GLOW_CLASS_MAP: Record<ProjectGlowVariant, string> = {
 };
 
 const BADGE_HOVER_CLASS_MAP: Record<ProjectBadgeType, string> = {
+  web: "group-hover:border-white/40 group-hover:bg-white/10 group-hover:text-white",
   android:
     "group-hover:border-[#3DDC84]/30 group-hover:bg-[#3DDC84]/10 group-hover:text-[#3DDC84]",
   plugin:
@@ -119,7 +136,7 @@ export function ProjectCard({ project }: { project: ProjectItem }) {
         rel="noopener noreferrer"
         className="repo-btn relative z-[7] flex items-center justify-center gap-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3.5 font-display text-[0.85rem] font-semibold text-white no-underline transition-all duration-300 hover:scale-[1.02] hover:border-accent hover:bg-white/[0.12] hover:text-white hover:shadow-[0_0_20px_rgba(255,255,255,0.25)] max-md:w-full max-md:rounded-xl max-md:p-3 max-md:text-[0.8rem]"
       >
-        View Repository
+        {project.buttonLabel || (project.badgeType === "web" ? "Visit Website" : "View Repository")}
         <svg
           width="14"
           height="14"

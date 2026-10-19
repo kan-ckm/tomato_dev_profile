@@ -531,6 +531,9 @@ body {
   }
 }
 
+.glow-web {
+  background: radial-gradient(circle, #ffffff, #a1a1aa);
+}
 .glow-freesia {
   background: radial-gradient(circle, #fcd1d8, #ff69b4);
 }

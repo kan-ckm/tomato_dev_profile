@@ -18,8 +18,8 @@ export interface BioLink {
   fallbackSvg?: "twitter" | "discord" | "github";
 }
 
-export type ProjectBadgeType = "proxy" | "android" | "plugin";
-export type ProjectGlowVariant = "freesia" | "ecolens" | "sudden" | "orbital";
+export type ProjectBadgeType = "web" | "proxy" | "android" | "plugin";
+export type ProjectGlowVariant = "web" | "freesia" | "ecolens" | "sudden" | "orbital";
 
 export interface ProjectItem {
   id: string;
@@ -31,6 +31,7 @@ export interface ProjectItem {
   iconSrc: string;
   languages: string[];
   repoUrl: string;
+  buttonLabel?: string;
 }
 
 export interface MusicTrack {
