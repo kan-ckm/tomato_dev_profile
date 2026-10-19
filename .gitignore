@@ -12,11 +12,14 @@
 
 # Environment variables & secrets (CRITICAL: never commit secrets)
 .env
-.env*.local
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env*
+!.env.example
+
+# Certificates & Keys
+*.pem
+*.key
+*.cert
+*.crt
 
 # IDE & Editor files
 .idea/
@@ -24,6 +27,8 @@
 *.swp
 *.swo
 *~
+*.sublime-workspace
+*.sublime-project
 
 # Operating System files
 .DS_Store
@@ -43,9 +48,18 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Vercel deployment
+# Vercel & Turbopack
 .vercel
+.turbo
+
+# Testing & Coverage
+coverage/
+.nyc_output/
 
 # TypeScript build info & Next types
 *.tsbuildinfo
 next-env.d.ts
+
+# Temporary & Scratch files
+tmp/
+temp/
