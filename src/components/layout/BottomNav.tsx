@@ -46,6 +46,7 @@ const NAV_ITEMS: NavItemConfig[] = [
       </svg>
     ),
   },
+  /*
   {
     href: "/clock",
     label: "Clock",
@@ -63,6 +64,7 @@ const NAV_ITEMS: NavItemConfig[] = [
       </svg>
     ),
   },
+  */
 ];
 
 export function BottomNav() {

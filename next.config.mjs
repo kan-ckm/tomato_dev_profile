@@ -23,8 +23,8 @@ const nextConfig = {
       },
       {
         source: "/clock.html",
-        destination: "/clock",
-        permanent: true,
+        destination: "/",
+        permanent: false,
       },
     ];
   },
