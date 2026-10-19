@@ -39,7 +39,7 @@ export default function HomePage() {
                 "linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent)",
             }}
           />
-          <div className="relative h-[7px] w-[7px] rounded-full bg-accent shadow-[0_0_10px_#b289ef] after:absolute after:left-1/2 after:top-1/2 after:h-[18px] after:w-[18px] after:-translate-x-1/2 after:-translate-y-1/2 after:animate-[spinRing_8s_linear_infinite] after:rounded-full after:border-[1.5px] after:border-dashed after:border-accent/35" />
+          <div className="relative h-[7px] w-[7px] rounded-full bg-accent shadow-[0_0_10px_rgba(255,255,255,0.8)] after:absolute after:left-1/2 after:top-1/2 after:h-[18px] after:w-[18px] after:-translate-x-1/2 after:-translate-y-1/2 after:animate-[spinRing_8s_linear_infinite] after:rounded-full after:border-[1.5px] after:border-dashed after:border-accent/35" />
           <span
             className="h-[1px] flex-1"
             style={{

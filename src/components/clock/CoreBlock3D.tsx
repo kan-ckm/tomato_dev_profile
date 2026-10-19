@@ -14,7 +14,7 @@ function smoothstep(x: number): number {
   return clamped * clamped * (3 - 2 * clamped);
 }
 
-function getGlowTex(color = "rgba(170,0,255,1)", r = 128): THREE.CanvasTexture {
+function getGlowTex(color = "rgba(255,255,255,1)", r = 128): THREE.CanvasTexture {
   const c = document.createElement("canvas");
   c.width = c.height = r * 2;
   const ctx = c.getContext("2d");
@@ -63,10 +63,10 @@ export function CoreBlock3D({ config }: CoreBlock3DProps) {
     renderer.toneMappingExposure = 1.0;
     renderer.outputEncoding = THREE.sRGBEncoding;
 
-    const ambientLight = new THREE.AmbientLight(0x150b24, 0.6);
+    const ambientLight = new THREE.AmbientLight(0x1a1a20, 0.7);
     scene.add(ambientLight);
 
-    const coreLight = new THREE.PointLight(0x8800ff, 5, 25);
+    const coreLight = new THREE.PointLight(0xffffff, 4.5, 25);
     coreLight.castShadow = true;
     coreLight.shadow.mapSize.width = 1024;
     coreLight.shadow.mapSize.height = 1024;
@@ -80,7 +80,7 @@ export function CoreBlock3D({ config }: CoreBlock3DProps) {
     scene.add(staticGroup);
     staticGroup.add(coreLight);
 
-    const dirLight = new THREE.DirectionalLight(0xdab3ff, 2.2);
+    const dirLight = new THREE.DirectionalLight(0xf0f0f5, 2.2);
     dirLight.position.set(10, 20, 15);
     dirLight.castShadow = true;
     dirLight.shadow.camera.near = 0.5;
@@ -94,7 +94,7 @@ export function CoreBlock3D({ config }: CoreBlock3DProps) {
     dirLight.shadow.mapSize.height = 1024;
     scene.add(dirLight);
 
-    const fillLight = new THREE.DirectionalLight(0x4400aa, 1.5);
+    const fillLight = new THREE.DirectionalLight(0x555566, 1.5);
     fillLight.position.set(-15, -10, -15);
     scene.add(fillLight);
 
@@ -127,8 +127,8 @@ export function CoreBlock3D({ config }: CoreBlock3DProps) {
     coreGeo.setAttribute("aRandom", new THREE.BufferAttribute(randoms, 1));
 
     const wireMat = new THREE.MeshPhysicalMaterial({
-      color: 0x8800ff,
-      emissive: 0x220066,
+      color: 0xffffff,
+      emissive: 0x333333,
       emissiveIntensity: 0.8,
       wireframe: true,
       transparent: true,
@@ -139,7 +139,7 @@ export function CoreBlock3D({ config }: CoreBlock3DProps) {
 
     const pointsMat = new THREE.PointsMaterial({
       size: 0.08,
-      color: 0xaa44ff,
+      color: 0xffffff,
       transparent: true,
       opacity: 0.75,
       blending: THREE.AdditiveBlending,
@@ -207,7 +207,7 @@ export function CoreBlock3D({ config }: CoreBlock3DProps) {
       for (let j = 0; j <= segs; j++) pts.push(new THREE.Vector3());
       const geo = new THREE.BufferGeometry().setFromPoints(pts);
       const mat = new THREE.LineBasicMaterial({
-        color: i % 2 === 0 ? 0xff0088 : 0xaa00ff,
+        color: i % 2 === 0 ? 0xffffff : 0xcccccc,
         transparent: true,
         opacity: 0.5,
         blending: THREE.AdditiveBlending,
@@ -239,7 +239,7 @@ export function CoreBlock3D({ config }: CoreBlock3DProps) {
     const createGlowMat = (opacity: number, power: number) =>
       new THREE.ShaderMaterial({
         uniforms: {
-          uColor: { value: new THREE.Color(0x9933ff) },
+          uColor: { value: new THREE.Color(0xffffff) },
           uOpacity: { value: opacity },
           uPower: { value: power },
         },
@@ -266,8 +266,8 @@ export function CoreBlock3D({ config }: CoreBlock3DProps) {
     coreGroup.add(glowOrb);
 
     let smoothBH = 1.0;
-    const colorLight = new THREE.Color(0x9933ff);
-    const colorDark = new THREE.Color(0x330077);
+    const colorLight = new THREE.Color(0xffffff);
+    const colorDark = new THREE.Color(0x555555);
 
     /* ─── 4. RING SYSTEM ─── */
     const mainGroup = new THREE.Group();
@@ -310,12 +310,12 @@ export function CoreBlock3D({ config }: CoreBlock3DProps) {
     ) => {
       const group = new THREE.Group();
       const stoneMat = new THREE.MeshPhysicalMaterial({
-        color: 0x140528,
-        emissive: 0x0a0011,
-        emissiveIntensity: 0.3,
+        color: 0x141418,
+        emissive: 0x050508,
+        emissiveIntensity: 0.2,
         metalness: 1.0,
         roughness: 0.25,
-        clearcoat: 0.5,
+        clearcoat: 0.6,
         flatShading: false,
       });
       const materials = [stoneMat, stoneMat];
@@ -411,7 +411,7 @@ export function CoreBlock3D({ config }: CoreBlock3DProps) {
     const debrisGroup = new THREE.Group();
     mainGroup.add(debrisGroup);
     const debrisMat = new THREE.MeshPhysicalMaterial({
-      color: 0x110522,
+      color: 0x18181c,
       roughness: 0.2,
       metalness: 0.9,
       clearcoat: 0.8,
@@ -481,7 +481,7 @@ export function CoreBlock3D({ config }: CoreBlock3DProps) {
 
     const pMat = new THREE.PointsMaterial({
       size: CFG.particleSize,
-      map: getGlowTex("rgba(190,100,255,1)", 16),
+      map: getGlowTex("rgba(255,255,255,1)", 16),
       transparent: true,
       opacity: 0.5,
       blending: THREE.AdditiveBlending,

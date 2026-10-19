@@ -113,7 +113,7 @@ export function FloatingPlayer() {
             setIsFloatingExpanded(false);
           }}
           className={cn(
-            "mobile-ctrl absolute flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-[rgba(20,20,25,0.35)] text-accent3 shadow-[0_8px_25px_rgba(0,0,0,0.4)] backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] active:!scale-90 active:bg-accent active:text-white",
+            "mobile-ctrl absolute flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-[rgba(20,20,25,0.35)] text-accent3 shadow-[0_8px_25px_rgba(0,0,0,0.4)] backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] active:!scale-90 active:bg-white active:text-black",
             isFloatingExpanded
               ? "pointer-events-auto opacity-100"
               : "pointer-events-none scale-50 opacity-0"
@@ -146,7 +146,7 @@ export function FloatingPlayer() {
             startAutoCollapse(2500);
           }}
           className={cn(
-            "mobile-ctrl absolute flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-[rgba(20,20,25,0.35)] text-accent3 shadow-[0_8px_25px_rgba(0,0,0,0.4)] backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] active:!scale-90 active:bg-accent active:text-white",
+            "mobile-ctrl absolute flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-[rgba(20,20,25,0.35)] text-accent3 shadow-[0_8px_25px_rgba(0,0,0,0.4)] backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] active:!scale-90 active:bg-white active:text-black",
             isFloatingExpanded
               ? "pointer-events-auto opacity-100"
               : "pointer-events-none scale-50 opacity-0"
@@ -166,7 +166,7 @@ export function FloatingPlayer() {
             startAutoCollapse(2500);
           }}
           className={cn(
-            "mobile-ctrl play-pause absolute flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-[rgba(20,20,25,0.35)] text-accent3 shadow-[0_8px_25px_rgba(0,0,0,0.4)] backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] active:!scale-90 active:bg-accent active:text-white",
+            "mobile-ctrl play-pause absolute flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-[rgba(20,20,25,0.35)] text-accent3 shadow-[0_8px_25px_rgba(0,0,0,0.4)] backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] active:!scale-90 active:bg-white active:text-black",
             isFloatingExpanded
               ? "pointer-events-auto opacity-100"
               : "pointer-events-none scale-50 opacity-0"
@@ -192,7 +192,7 @@ export function FloatingPlayer() {
             startAutoCollapse(2500);
           }}
           className={cn(
-            "mobile-ctrl absolute flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-[rgba(20,20,25,0.35)] text-accent3 shadow-[0_8px_25px_rgba(0,0,0,0.4)] backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] active:!scale-90 active:bg-accent active:text-white",
+            "mobile-ctrl absolute flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-[rgba(20,20,25,0.35)] text-accent3 shadow-[0_8px_25px_rgba(0,0,0,0.4)] backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] active:!scale-90 active:bg-white active:text-black",
             isFloatingExpanded
               ? "pointer-events-auto opacity-100"
               : "pointer-events-none scale-50 opacity-0"
@@ -219,37 +219,37 @@ export function FloatingPlayer() {
           });
         }}
         className={cn(
-          "music-toggle relative z-[2] flex h-[54px] w-[54px] cursor-pointer items-center justify-center rounded-full border p-0 shadow-[0_10px_40px_rgba(0,0,0,0.5)] backdrop-blur-md transition-all duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:scale-110 hover:border-accent hover:bg-accent/20 hover:text-white hover:shadow-[0_0_25px_rgba(178,137,239,0.5)]",
+          "music-toggle relative z-[2] flex h-[54px] w-[54px] cursor-pointer items-center justify-center rounded-full border p-0 shadow-[0_10px_40px_rgba(0,0,0,0.5)] backdrop-blur-md transition-all duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] hover:scale-110 hover:border-white hover:bg-white/10 hover:text-white hover:shadow-[0_0_25px_rgba(255,255,255,0.4)]",
           isPlaying
-            ? "playing border-accent bg-accent/[0.12] text-white"
-            : "muted border-white/[0.08] bg-[rgba(25,25,30,0.35)] text-accent",
-          isFloatingExpanded && "!rotate-45 !border-accent2 !bg-accent !text-white"
+            ? "playing border-white bg-white/[0.12] text-white"
+            : "muted border-white/[0.08] bg-[rgba(25,25,30,0.35)] text-white/70",
+          isFloatingExpanded && "!rotate-45 !border-white !bg-white !text-black"
         )}
       >
         <div
           className={cn(
             "relative flex h-full w-full items-center justify-center",
-            isPlaying && "drop-shadow-[0_0_5px_#b289ef]"
+            isPlaying && "drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]"
           )}
         >
           {isPlaying ? (
             <div className="flex h-[22px] items-center justify-center gap-[3.5px]">
               <span
                 className={cn(
-                  "music-wave-1 w-[3.5px] rounded-[4px] bg-accent shadow-[0_0_8px_rgba(178,137,239,0.5)]",
-                  isFloatingExpanded && "!bg-white"
+                  "music-wave-1 w-[3.5px] rounded-[4px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]",
+                  isFloatingExpanded && "!bg-black"
                 )}
               />
               <span
                 className={cn(
-                  "music-wave-2 w-[3.5px] rounded-[4px] bg-accent shadow-[0_0_8px_rgba(178,137,239,0.5)]",
-                  isFloatingExpanded && "!bg-white"
+                  "music-wave-2 w-[3.5px] rounded-[4px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]",
+                  isFloatingExpanded && "!bg-black"
                 )}
               />
               <span
                 className={cn(
-                  "music-wave-3 w-[3.5px] rounded-[4px] bg-accent shadow-[0_0_8px_rgba(178,137,239,0.5)]",
-                  isFloatingExpanded && "!bg-white"
+                  "music-wave-3 w-[3.5px] rounded-[4px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]",
+                  isFloatingExpanded && "!bg-black"
                 )}
               />
             </div>

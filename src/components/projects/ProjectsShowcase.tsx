@@ -109,7 +109,7 @@ export function ProjectsShowcase() {
               className={cn(
                 "h-1.5 w-1.5 cursor-pointer rounded-full border-none p-0 transition-all duration-300",
                 idx === currentIndex
-                  ? "scale-[1.4] bg-accent shadow-[0_0_10px_rgba(178,137,239,0.5)]"
+                  ? "scale-[1.4] bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]"
                   : "bg-white/20"
               )}
             />

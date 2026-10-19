@@ -95,7 +95,7 @@ export function ProfileSidebar() {
               className="avatar-ring absolute -inset-[3px] animate-spin-slow rounded-full"
               style={{
                 background:
-                  "conic-gradient(from 180deg, var(--accent), var(--accent2), #d4a8ff, var(--accent))",
+                  "conic-gradient(from 180deg, #ffffff, #d4d4d8, #71717a, #ffffff)",
               }}
               aria-hidden="true"
             />
@@ -135,7 +135,7 @@ export function ProfileSidebar() {
               href={profileConfig.discordUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-medium text-accent no-underline transition-all duration-200 hover:text-accent3 hover:[text-shadow:0_0_8px_rgba(178,137,239,0.4)]"
+              className="font-medium text-accent no-underline transition-all duration-200 hover:text-white hover:[text-shadow:0_0_8px_rgba(255,255,255,0.6)]"
             >
               <strong>{profileConfig.discordHandle}</strong>
             </a>
@@ -155,7 +155,7 @@ export function ProfileSidebar() {
               target="_blank"
               rel="noopener noreferrer"
               title={social.title}
-              className="group relative flex h-[42px] w-[42px] items-center justify-center overflow-hidden rounded-[10px] border border-border bg-surface text-muted no-underline transition-all duration-250 ease-[cubic-bezier(0.34,1.56,0.64,1)] before:absolute before:inset-0 before:bg-gradient-to-br before:from-accent2 before:to-accent3 before:opacity-0 before:transition-opacity before:duration-250 hover:-translate-y-[3px] hover:scale-[1.08] hover:border-border-hover hover:text-white hover:shadow-[0_8px_24px_rgba(150,97,255,0.3)] hover:before:opacity-15"
+              className="group relative flex h-[42px] w-[42px] items-center justify-center overflow-hidden rounded-[10px] border border-border bg-surface text-muted no-underline transition-all duration-250 ease-[cubic-bezier(0.34,1.56,0.64,1)] before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/20 before:to-white/5 before:opacity-0 before:transition-opacity before:duration-250 hover:-translate-y-[3px] hover:scale-[1.08] hover:border-border-hover hover:text-white hover:shadow-[0_8px_24px_rgba(255,255,255,0.2)] hover:before:opacity-100"
             >
               <SocialIcon platform={social.platform} />
             </a>

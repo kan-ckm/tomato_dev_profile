@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { AnimatedBackground } from "@/components/background/AnimatedBackground";
+import { SnowBackground } from "@/components/background/SnowBackground";
 import { BgTextStrip } from "@/components/background/BgTextStrip";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { MusicPlayerProvider } from "@/components/player/MusicPlayerContext";
@@ -28,7 +28,7 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
 
   return (
     <MusicPlayerProvider>
-      <AnimatedBackground />
+      <SnowBackground />
       <BgTextStrip />
       {children}
       <FloatingPlayer />

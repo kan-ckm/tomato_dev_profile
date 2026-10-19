@@ -148,7 +148,7 @@ export function BottomNav() {
                 "nav-item relative flex items-center justify-center gap-2 font-display text-xs font-semibold uppercase tracking-[0.05em] no-underline transition-all duration-300",
                 "max-lg:h-[54px] max-lg:w-[54px] max-lg:rounded-[18px] max-lg:p-0 lg:rounded-xl lg:px-[18px] lg:py-2.5",
                 active
-                  ? "text-accent bg-transparent [&_svg]:drop-shadow-[0_0_8px_rgba(178,137,239,0.8)] lg:after:absolute lg:after:bottom-1.5 lg:after:left-1/2 lg:after:h-[2px] lg:after:w-3.5 lg:after:-translate-x-1/2 lg:after:rounded-[10px] lg:after:bg-[#e478ff] lg:after:shadow-[0_0_8px_rgba(228,120,255,0.6)]"
+                  ? "text-white bg-transparent [&_svg]:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] lg:after:absolute lg:after:bottom-1.5 lg:after:left-1/2 lg:after:h-[2px] lg:after:w-3.5 lg:after:-translate-x-1/2 lg:after:rounded-[10px] lg:after:bg-white lg:after:shadow-[0_0_8px_rgba(255,255,255,0.8)]"
                   : "text-muted hover:bg-white/[0.08] hover:text-white"
               )}
             >

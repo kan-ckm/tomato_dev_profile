@@ -4,31 +4,19 @@
 
 /* ── CSS Custom Properties (Design Tokens) ── */
 :root {
-  --bg: #0b0b0f;
+  --bg: #050508;
   --surface: rgba(255, 255, 255, 0.04);
   --surface-hover: rgba(255, 255, 255, 0.08);
   --border: rgba(255, 255, 255, 0.08);
-  --border-hover: rgba(178, 137, 239, 0.4);
-  --accent: #b289ef;
-  --accent2: #9661ff;
-  --accent3: #d4a8ff;
-  --text: #f0edf7;
-  --muted: rgba(240, 237, 247, 0.45);
+  --border-hover: rgba(255, 255, 255, 0.4);
+  --accent: #ffffff;
+  --accent2: #d4d4d8;
+  --accent3: #a1a1aa;
+  --text: #f4f4f5;
+  --muted: rgba(244, 244, 245, 0.5);
   --radius: 18px;
   --radius-sm: 12px;
-  --glow: 0 0 40px rgba(178, 137, 239, 0.15);
-
-  /* Animated Gradient Background Tokens */
-  --color-bg1: rgb(20, 5, 40);
-  --color-bg2: rgb(8, 2, 20);
-  --color1: 80, 40, 170;
-  --color2: 100, 50, 190;
-  --color3: 60, 30, 150;
-  --color4: 120, 65, 200;
-  --color5: 50, 25, 140;
-  --color-interactive: 110, 60, 210;
-  --circle-size: 80%;
-  --blending: screen;
+  --glow: 0 0 35px rgba(255, 255, 255, 0.18);
 }
 
 *,
@@ -277,13 +265,11 @@ body {
   font-weight: 800;
   font-family: "Bitcount Single", sans-serif;
   letter-spacing: 0.1em;
-  color: rgba(180, 155, 220, 0.04);
-  -webkit-text-stroke: 1.2px rgba(200, 180, 255, 0.55);
+  color: rgba(255, 255, 255, 0.03);
+  -webkit-text-stroke: 1.2px rgba(255, 255, 255, 0.45);
   text-shadow:
-    1.5px 0 0 rgba(255, 60, 60, 0.25),
-    -1.5px 0 0 rgba(60, 130, 255, 0.25),
-    0 0 6px rgba(178, 137, 239, 0.35),
-    0 0 18px rgba(178, 137, 239, 0.12);
+    0 0 8px rgba(255, 255, 255, 0.35),
+    0 0 20px rgba(255, 255, 255, 0.15);
   white-space: nowrap;
   user-select: none;
   opacity: 0;
@@ -296,8 +282,8 @@ body {
 
 .bg-text-strip-shadow {
   font-size: 0.95em;
-  color: rgba(80, 60, 120, 0.01);
-  -webkit-text-stroke: 0.5px rgba(100, 80, 160, 0.2);
+  color: rgba(255, 255, 255, 0.01);
+  -webkit-text-stroke: 0.5px rgba(255, 255, 255, 0.15);
   text-shadow: none;
   animation: none;
   opacity: 0;
@@ -387,7 +373,7 @@ body {
   height: 10px;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 10px var(--accent);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
 }
 
 /* ── Avatar & Status Animations ── */
@@ -450,8 +436,8 @@ body {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(178, 137, 239, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(178, 137, 239, 0.06) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
   background-size: 40px 40px;
   mask-image: linear-gradient(to bottom, transparent, black 40%, black 60%, transparent);
 }
@@ -582,7 +568,7 @@ body {
     border-color: var(--accent);
     box-shadow:
       0 20px 60px rgba(0, 0, 0, 0.5),
-      0 0 20px rgba(178, 137, 239, 0.2);
+      0 0 20px rgba(255, 255, 255, 0.2);
     transition:
       width 0.6s cubic-bezier(0.34, 1.08, 0.64, 1),
       max-height 0.6s cubic-bezier(0.34, 1.08, 0.64, 1),
@@ -626,8 +612,8 @@ body {
   .music-player.mini-player-mode:has(.music-toggle.playing):not(.expanded) {
     border-color: var(--accent);
     box-shadow:
-      0 0 20px rgba(178, 137, 239, 0.4),
-      inset 0 0 15px rgba(178, 137, 239, 0.2);
+      0 0 20px rgba(255, 255, 255, 0.35),
+      inset 0 0 15px rgba(255, 255, 255, 0.15);
   }
 
   .music-player.mini-player-mode .music-toggle {

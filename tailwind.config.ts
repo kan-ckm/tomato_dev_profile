@@ -10,16 +10,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: "#0b0b0f",
+        bg: "#050508",
         surface: "rgba(255, 255, 255, 0.04)",
         "surface-hover": "rgba(255, 255, 255, 0.08)",
         border: "rgba(255, 255, 255, 0.08)",
-        "border-hover": "rgba(178, 137, 239, 0.4)",
-        accent: "#b289ef",
-        accent2: "#9661ff",
-        accent3: "#d4a8ff",
-        text: "#f0edf7",
-        muted: "rgba(240, 237, 247, 0.45)",
+        "border-hover": "rgba(255, 255, 255, 0.4)",
+        accent: "#ffffff",
+        accent2: "#d4d4d8",
+        accent3: "#a1a1aa",
+        text: "#f4f4f5",
+        muted: "rgba(244, 244, 245, 0.5)",
       },
       fontFamily: {
         sans: ["'DM Sans'", "sans-serif"],
@@ -33,8 +33,8 @@ const config: Config = {
         panel: "24px",
       },
       boxShadow: {
-        glow: "0 0 40px rgba(178, 137, 239, 0.15)",
-        panel: "0 10px 30px rgba(0, 0, 0, 0.2)",
+        glow: "0 0 35px rgba(255, 255, 255, 0.18)",
+        panel: "0 10px 30px rgba(0, 0, 0, 0.35)",
       },
       keyframes: {
         fadeUp: {

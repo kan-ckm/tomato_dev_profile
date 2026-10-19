@@ -63,7 +63,7 @@ export function ProjectCard({ project }: { project: ProjectItem }) {
       className={cn(
         "project-card group relative flex h-full flex-col overflow-hidden rounded-panel border border-white/[0.05] bg-white/[0.02] px-6 py-8 shadow-[0_10px_30px_rgba(0,0,0,0.15)] backdrop-blur-[5px] transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]",
         "before:pointer-events-none before:absolute before:inset-0 before:z-[6] before:bg-gradient-to-br before:from-accent before:to-transparent before:opacity-0 before:transition-opacity before:duration-500",
-        "md:hover:-translate-y-3 md:hover:border-border-hover md:hover:shadow-[0_30px_60px_rgba(0,0,0,0.4),0_0_20px_rgba(178,137,239,0.15)] md:hover:before:opacity-[0.08]",
+        "md:hover:-translate-y-3 md:hover:border-border-hover md:hover:shadow-[0_30px_60px_rgba(0,0,0,0.4),0_0_20px_rgba(255,255,255,0.15)] md:hover:before:opacity-[0.08]",
         "max-md:mx-[16vw] max-md:max-h-[50vh] max-md:min-h-[360px] max-md:w-[68vw] max-md:shrink-0 max-md:items-center max-md:justify-between max-md:px-5 max-md:pb-5 max-md:pt-6 max-md:text-center",
         "max-[480px]:mx-[15vw] max-[480px]:min-h-[340px] max-[480px]:w-[70vw] max-[480px]:px-4 max-[480px]:pb-4 max-[480px]:pt-6"
       )}
@@ -117,7 +117,7 @@ export function ProjectCard({ project }: { project: ProjectItem }) {
         href={project.repoUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="repo-btn relative z-[7] flex items-center justify-center gap-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3.5 font-display text-[0.85rem] font-semibold text-white no-underline transition-all duration-300 hover:scale-[1.02] hover:border-accent hover:bg-accent/[0.12] hover:text-white hover:shadow-[0_0_20px_rgba(178,137,239,0.25)] max-md:w-full max-md:rounded-xl max-md:p-3 max-md:text-[0.8rem]"
+        className="repo-btn relative z-[7] flex items-center justify-center gap-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3.5 font-display text-[0.85rem] font-semibold text-white no-underline transition-all duration-300 hover:scale-[1.02] hover:border-accent hover:bg-white/[0.12] hover:text-white hover:shadow-[0_0_20px_rgba(255,255,255,0.25)] max-md:w-full max-md:rounded-xl max-md:p-3 max-md:text-[0.8rem]"
       >
         View Repository
         <svg

@@ -107,7 +107,7 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
               onUserInteraction?.();
               togglePlayPause();
             }}
-            className="flex h-[38px] w-[38px] cursor-pointer items-center justify-center rounded-full border-none bg-accent text-white shadow-[0_4px_15px_rgba(178,137,239,0.3)] transition-all duration-200 hover:scale-105 hover:bg-accent2"
+            className="flex h-[38px] w-[38px] cursor-pointer items-center justify-center rounded-full border-none bg-accent text-zinc-950 shadow-[0_4px_15px_rgba(255,255,255,0.25)] transition-all duration-200 hover:scale-105 hover:bg-accent2"
           >
             {isPlaying ? (
               <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">

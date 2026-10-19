@@ -40,7 +40,7 @@ export function LinkCard({ link, index }: LinkCardProps) {
       target="_blank"
       rel="noopener noreferrer"
       style={{ animationDelay: `${(index + 1) * 0.05}s` }}
-      className="link-card group relative flex animate-fade-up items-center gap-3.5 overflow-hidden rounded-card-sm border border-border bg-surface px-4 py-3.5 text-text no-underline transition-all duration-250 ease-[cubic-bezier(0.34,1.56,0.64,1)] before:absolute before:inset-0 before:bg-gradient-to-r before:from-accent2 before:to-transparent before:opacity-0 before:transition-opacity before:duration-300 hover:translate-x-1 hover:border-border-hover hover:bg-surface-hover hover:shadow-[0_0_40px_rgba(178,137,239,0.15),-4px_0_0_#b289ef] hover:before:opacity-[0.06]"
+      className="link-card group relative flex animate-fade-up items-center gap-3.5 overflow-hidden rounded-card-sm border border-border bg-surface px-4 py-3.5 text-text no-underline transition-all duration-250 ease-[cubic-bezier(0.34,1.56,0.64,1)] before:absolute before:inset-0 before:bg-gradient-to-r before:from-white/10 before:to-transparent before:opacity-0 before:transition-opacity before:duration-300 hover:translate-x-1 hover:border-border-hover hover:bg-surface-hover hover:shadow-[0_0_35px_rgba(255,255,255,0.15),-4px_0_0_#ffffff] hover:before:opacity-100"
     >
       <div
         className="relative z-[1] flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] text-[1.1rem] transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] group-hover:-rotate-8 group-active:-rotate-8"
@@ -72,7 +72,7 @@ export function LinkCard({ link, index }: LinkCardProps) {
       </div>
 
       <div
-        className="relative z-[1] shrink-0 -translate-x-1.5 text-muted opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:text-accent3 group-hover:opacity-100"
+        className="relative z-[1] shrink-0 -translate-x-1.5 text-muted opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:text-white group-hover:opacity-100"
         aria-hidden="true"
       >
         →
