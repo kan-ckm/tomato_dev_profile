@@ -1,0 +1,668 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── CSS Custom Properties (Design Tokens) ── */
+:root {
+  --bg: #0b0b0f;
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-hover: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(178, 137, 239, 0.4);
+  --accent: #b289ef;
+  --accent2: #9661ff;
+  --accent3: #d4a8ff;
+  --text: #f0edf7;
+  --muted: rgba(240, 237, 247, 0.45);
+  --radius: 18px;
+  --radius-sm: 12px;
+  --glow: 0 0 40px rgba(178, 137, 239, 0.15);
+
+  /* Animated Gradient Background Tokens */
+  --color-bg1: rgb(20, 5, 40);
+  --color-bg2: rgb(8, 2, 20);
+  --color1: 80, 40, 170;
+  --color2: 100, 50, 190;
+  --color3: 60, 30, 150;
+  --color4: 120, 65, 200;
+  --color5: 50, 25, 140;
+  --color-interactive: 110, 60, 210;
+  --circle-size: 80%;
+  --blending: screen;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus {
+  outline: none;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (max-width: 1024px) {
+  html {
+    scroll-behavior: auto !important;
+  }
+}
+
+body {
+  font-family: "DM Sans", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  position: relative;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 1025px) {
+  body {
+    overflow: hidden;
+    height: 100vh;
+  }
+}
+
+/* ── Animated Gradient Background Keyframes & Blobs ── */
+@keyframes moveInCircle {
+  0% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(180deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes moveVertical {
+  0% {
+    transform: translateY(-50%);
+  }
+  50% {
+    transform: translateY(50%);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes moveHorizontal {
+  0% {
+    transform: translateX(-50%) translateY(-10%);
+  }
+  50% {
+    transform: translateX(50%) translateY(10%);
+  }
+  100% {
+    transform: translateX(-50%) translateY(-10%);
+  }
+}
+
+.gradient-bg {
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  overflow: hidden;
+  background: linear-gradient(40deg, var(--color-bg1), var(--color-bg2));
+  top: 0;
+  left: 0;
+  z-index: 0;
+}
+
+.gradient-bg::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 11, 15, 0.55);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.gradient-bg .gradients-container {
+  filter: url(#goo) blur(40px);
+  width: 100%;
+  height: 100%;
+}
+
+.gradient-bg .g1 {
+  position: absolute;
+  background: radial-gradient(
+      circle at center,
+      rgba(var(--color1), 0.8) 0,
+      rgba(var(--color1), 0) 50%
+    )
+    no-repeat;
+  mix-blend-mode: var(--blending);
+  width: var(--circle-size);
+  height: var(--circle-size);
+  top: calc(50% - var(--circle-size) / 2);
+  left: calc(50% - var(--circle-size) / 2);
+  transform-origin: center center;
+  animation: moveVertical 30s ease infinite;
+  opacity: 1;
+  will-change: transform;
+}
+
+.gradient-bg .g2 {
+  position: absolute;
+  background: radial-gradient(
+      circle at center,
+      rgba(var(--color2), 0.8) 0,
+      rgba(var(--color2), 0) 50%
+    )
+    no-repeat;
+  mix-blend-mode: var(--blending);
+  width: var(--circle-size);
+  height: var(--circle-size);
+  top: calc(50% - var(--circle-size) / 2);
+  left: calc(50% - var(--circle-size) / 2);
+  transform-origin: calc(50% - 400px);
+  animation: moveInCircle 20s reverse infinite;
+  opacity: 1;
+  will-change: transform;
+}
+
+.gradient-bg .g3 {
+  position: absolute;
+  background: radial-gradient(
+      circle at center,
+      rgba(var(--color3), 0.8) 0,
+      rgba(var(--color3), 0) 50%
+    )
+    no-repeat;
+  mix-blend-mode: var(--blending);
+  width: var(--circle-size);
+  height: var(--circle-size);
+  top: calc(50% - var(--circle-size) / 2 + 200px);
+  left: calc(50% - var(--circle-size) / 2 - 500px);
+  transform-origin: calc(50% + 400px);
+  animation: moveInCircle 40s linear infinite;
+  opacity: 1;
+  will-change: transform;
+}
+
+.gradient-bg .g4 {
+  position: absolute;
+  background: radial-gradient(
+      circle at center,
+      rgba(var(--color4), 0.8) 0,
+      rgba(var(--color4), 0) 50%
+    )
+    no-repeat;
+  mix-blend-mode: var(--blending);
+  width: var(--circle-size);
+  height: var(--circle-size);
+  top: calc(50% - var(--circle-size) / 2);
+  left: calc(50% - var(--circle-size) / 2);
+  transform-origin: calc(50% - 200px);
+  animation: moveHorizontal 40s ease infinite;
+  opacity: 0.7;
+  will-change: transform;
+}
+
+.gradient-bg .g5 {
+  position: absolute;
+  background: radial-gradient(
+      circle at center,
+      rgba(var(--color5), 0.8) 0,
+      rgba(var(--color5), 0) 50%
+    )
+    no-repeat;
+  mix-blend-mode: var(--blending);
+  width: calc(var(--circle-size) * 2);
+  height: calc(var(--circle-size) * 2);
+  top: calc(50% - var(--circle-size));
+  left: calc(50% - var(--circle-size));
+  transform-origin: calc(50% - 800px) calc(50% + 200px);
+  animation: moveInCircle 20s ease infinite;
+  opacity: 0.6;
+  will-change: transform;
+}
+
+.gradient-bg .interactive {
+  position: absolute;
+  background: radial-gradient(
+      circle at center,
+      rgba(var(--color-interactive), 0.8) 0,
+      rgba(var(--color-interactive), 0) 50%
+    )
+    no-repeat;
+  mix-blend-mode: var(--blending);
+  width: 100%;
+  height: 100%;
+  top: -50%;
+  left: -50%;
+  opacity: 0.7;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gradient-bg .g1,
+  .gradient-bg .g2,
+  .gradient-bg .g3,
+  .gradient-bg .g4,
+  .gradient-bg .g5,
+  .gradient-bg .interactive {
+    animation: none !important;
+    opacity: 0.3;
+  }
+  .avatar-ring,
+  .avatar-status::after {
+    animation: none !important;
+  }
+}
+
+/* ── Background Text Strip (CRT Flicker) ── */
+.bg-text-strip {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+  font-size: clamp(60px, 8vw, 120px);
+}
+
+.bg-text-strip-inner {
+  position: absolute;
+  font-size: inherit;
+  font-weight: 800;
+  font-family: "Bitcount Single", sans-serif;
+  letter-spacing: 0.1em;
+  color: rgba(180, 155, 220, 0.04);
+  -webkit-text-stroke: 1.2px rgba(200, 180, 255, 0.55);
+  text-shadow:
+    1.5px 0 0 rgba(255, 60, 60, 0.25),
+    -1.5px 0 0 rgba(60, 130, 255, 0.25),
+    0 0 6px rgba(178, 137, 239, 0.35),
+    0 0 18px rgba(178, 137, 239, 0.12);
+  white-space: nowrap;
+  user-select: none;
+  opacity: 0;
+  will-change: transform;
+}
+
+.bg-text-strip-inner.active {
+  animation: crtFlicker 0.12s steps(3) infinite;
+}
+
+.bg-text-strip-shadow {
+  font-size: 0.95em;
+  color: rgba(80, 60, 120, 0.01);
+  -webkit-text-stroke: 0.5px rgba(100, 80, 160, 0.2);
+  text-shadow: none;
+  animation: none;
+  opacity: 0;
+}
+
+@media (max-width: 768px) {
+  .bg-text-strip-inner {
+    display: none;
+  }
+}
+
+.bg-text-strip::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 3px,
+    transparent 3px,
+    transparent 4px
+  );
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+
+@keyframes crtFlicker {
+  0% {
+    opacity: 1;
+    filter: brightness(1) contrast(1);
+  }
+  30% {
+    opacity: 0.97;
+    filter: brightness(1.02) contrast(0.98);
+  }
+  60% {
+    opacity: 1;
+    filter: brightness(0.98) contrast(1.01);
+  }
+  100% {
+    opacity: 0.98;
+    filter: brightness(1.01) contrast(1);
+  }
+}
+
+/* ── Custom Scrollbars & Range Sliders ── */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 60px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+}
+
+/* ── Avatar & Status Animations ── */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes statusPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.8;
+  }
+  60%,
+  100% {
+    transform: translate(-50%, -50%) scale(2.2);
+    opacity: 0;
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spinRing {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* ── Playlist Expand Effects on Sidebar Cover ── */
+@media (min-width: 1025px) {
+  .playlist-is-expanded .sidebar-section .cover {
+    height: 240px !important;
+  }
+  .playlist-is-expanded .sidebar-section .avatar-wrap {
+    margin-top: 40px !important;
+    opacity: 0;
+  }
+}
+
+.playlist-is-expanded .cover-img {
+  transform: scale(1.58) translateY(30px);
+  transform-origin: left center;
+  filter: brightness(0.9) saturate(1.6);
+}
+
+.cover-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(178, 137, 239, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(178, 137, 239, 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: linear-gradient(to bottom, transparent, black 40%, black 60%, transparent);
+}
+
+/* ── Music Wave Bars ── */
+@keyframes musicWaveInside {
+  0% {
+    transform: scaleY(0.4);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+
+.music-wave-1 {
+  height: 12px;
+  animation: musicWaveInside 0.6s infinite alternate;
+}
+.music-wave-2 {
+  height: 22px;
+  animation: musicWaveInside 0.8s infinite alternate 0.2s;
+}
+.music-wave-3 {
+  height: 16px;
+  animation: musicWaveInside 0.7s infinite alternate 0.4s;
+}
+
+/* ── Project Card Morphing Glows ── */
+@keyframes morphGlow {
+  0%,
+  100% {
+    border-radius: 40% 60% 70% 30% / 40% 40% 60% 50%;
+  }
+  33% {
+    border-radius: 70% 30% 50% 50% / 30% 30% 70% 70%;
+  }
+  66% {
+    border-radius: 40% 60% 30% 70% / 60% 30% 70% 40%;
+  }
+}
+
+.icon-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  filter: blur(20px);
+  opacity: 0.3;
+  animation: morphGlow 8s linear infinite;
+}
+
+@media (max-width: 768px) {
+  .icon-glow {
+    animation: none !important;
+    border-radius: 50% !important;
+    opacity: 0.25;
+  }
+}
+
+.glow-freesia {
+  background: radial-gradient(circle, #fcd1d8, #ff69b4);
+}
+.glow-ecolens {
+  background: radial-gradient(circle, #d1ff98, #56ab2f);
+}
+.glow-sudden {
+  background: radial-gradient(circle, #e0e0e0, #9370db);
+}
+.glow-orbital {
+  background: radial-gradient(circle, #ff3885, #ff1111);
+}
+
+/* ── Mobile Radial Music Controls Fan-out ── */
+.music-player.expanded #mobile-playlist {
+  transform: scale(1) translate(-85px, 0px);
+  transition-delay: 0.1s;
+}
+.music-player.expanded #mobile-prev {
+  transform: scale(1) translate(-75px, -45px);
+  transition-delay: 0.15s;
+}
+.music-player.expanded #mobile-play-pause {
+  transform: scale(1) translate(-45px, -75px);
+  transition-delay: 0.2s;
+}
+.music-player.expanded #mobile-next {
+  transform: scale(1) translate(0px, -85px);
+  transition-delay: 0.25s;
+}
+
+/* ── Desktop Expanding Mini-Player Mode (Used on /projects and /clock) ── */
+@media (min-width: 1025px) {
+  .music-player.mini-player-mode {
+    display: flex !important;
+    position: fixed;
+    right: 14px;
+    bottom: 24px;
+    z-index: 1000;
+    width: 54px;
+    min-height: 54px;
+    max-height: 54px;
+    border-radius: 50%;
+    background: rgba(15, 15, 20, 0.35);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    padding: 0;
+    flex-direction: column;
+    justify-content: flex-end;
+    transform-origin: bottom right;
+    will-change: width, max-height, border-radius, padding;
+    transition:
+      width 0.55s cubic-bezier(0.4, 0, 0.2, 1),
+      max-height 0.55s cubic-bezier(0.4, 0, 0.2, 1),
+      border-radius 0.55s cubic-bezier(0.4, 0, 0.2, 1),
+      padding 0.55s cubic-bezier(0.4, 0, 0.2, 1),
+      border-color 0.4s ease,
+      box-shadow 0.4s ease;
+  }
+
+  .music-player.mini-player-mode.expanded {
+    width: 340px;
+    height: auto;
+    max-height: 560px;
+    border-radius: 24px;
+    padding: 24px;
+    border-color: var(--accent);
+    box-shadow:
+      0 20px 60px rgba(0, 0, 0, 0.5),
+      0 0 20px rgba(178, 137, 239, 0.2);
+    transition:
+      width 0.6s cubic-bezier(0.34, 1.08, 0.64, 1),
+      max-height 0.6s cubic-bezier(0.34, 1.08, 0.64, 1),
+      border-radius 0.5s cubic-bezier(0.34, 1.08, 0.64, 1),
+      padding 0.5s cubic-bezier(0.34, 1.08, 0.64, 1),
+      border-color 0.4s ease,
+      box-shadow 0.4s ease;
+  }
+
+  .mini-player-mode .mini-player-ui {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity 0.15s ease,
+      visibility 0s linear 0.15s;
+    flex-grow: 1;
+    width: 100%;
+    display: flex !important;
+    flex-direction: column;
+  }
+
+  .music-player.mini-player-mode.expanded .mini-player-ui {
+    opacity: 1;
+    visibility: visible;
+    transition:
+      opacity 0.35s ease 0.2s,
+      visibility 0s linear 0s;
+  }
+
+  .music-player.mini-player-mode .mobile-controls {
+    display: none !important;
+  }
+
+  .music-player.mini-player-mode:has(.music-toggle.playing):not(.expanded) {
+    border-color: var(--accent);
+    box-shadow:
+      0 0 20px rgba(178, 137, 239, 0.4),
+      inset 0 0 15px rgba(178, 137, 239, 0.2);
+  }
+
+  .music-player.mini-player-mode .music-toggle {
+    width: 100%;
+    height: 100%;
+    flex-shrink: 0;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+      opacity 0.25s ease,
+      transform 0.25s ease;
+  }
+
+  .music-player.mini-player-mode .music-toggle:hover {
+    transform: scale(1.05);
+  }
+
+  .music-player.mini-player-mode.expanded .music-toggle {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.7);
+  }
+}
+
+/* Mobile backdrop optimization */
+body.is-mobile .bottom-nav,
+body.is-mobile .music-toggle,
+body.is-mobile .slider-btn {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
