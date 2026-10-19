@@ -83,7 +83,6 @@ profiletomato/
 │   ├── config/                  # Nơi chứa dữ liệu cấu hình để dễ dàng mở rộng
 │   ├── lib/                     # Tiện ích kết nối Upstash Redis, Bảo mật & Format
 │   └── types/                   # Định nghĩa kiểu dữ liệu TypeScript
-├── TomatoDevs/                  # Thư mục dự án Wallpaper Engine độc lập
 └── docs/                        # Tài liệu hướng dẫn đọc hiểu dự án chi tiết
 ```
 
