@@ -3,28 +3,45 @@ import { bioLinks, profileConfig } from "@/config/site.config";
 import { ProfileSidebar } from "@/components/profile/ProfileSidebar";
 import { LinkCard } from "@/components/profile/LinkCard";
 import { TikTokCard } from "@/components/profile/TikTokCard";
+import { MediaShowcase } from "@/components/profile/MediaShowcase";
 
 export default function HomePage() {
   return (
-    <div className="wrapper relative z-[2] mx-auto max-w-[480px] pb-[60px] lg:grid lg:h-screen lg:max-w-[1000px] lg:grid-cols-[minmax(300px,358.4px)_1fr] lg:items-stretch lg:gap-8 lg:px-6 lg:py-[30px]">
+    <div className="wrapper relative z-[2] mx-auto max-w-[480px] pb-[60px] lg:grid lg:h-screen lg:max-w-[1060px] xl:max-w-[1160px] lg:grid-cols-[minmax(300px,340px)_1fr] lg:items-stretch lg:gap-7 lg:px-6 lg:py-[30px]">
       {/* Left Sidebar (Profile + Desktop Full Player) */}
       <ProfileSidebar />
 
       {/* Right Main Content (Scrollable on Desktop) */}
-      <main className="main-content custom-scrollbar lg:h-[calc(100vh-60px)] lg:overflow-y-auto lg:rounded-panel lg:border lg:border-white/[0.05] lg:bg-white/[0.02] lg:pb-[30px] lg:pt-2.5 lg:shadow-[0_10px_30px_rgba(0,0,0,0.15)] lg:backdrop-blur-[5px]">
-        {/* Section Label */}
-        <div
-          className="section-label mx-6 mb-3 mt-7 flex items-center gap-2.5 font-display text-[0.7rem] font-bold uppercase tracking-[0.15em] text-muted after:h-[1px] after:flex-1 after:bg-border lg:!mt-5"
-          aria-label="Useful Links"
-        >
-          📎 Links
-        </div>
+      <main className="main-content custom-scrollbar lg:h-[calc(100vh-60px)] lg:overflow-y-auto lg:rounded-panel lg:border lg:border-white/[0.05] lg:bg-white/[0.02] lg:pb-[30px] lg:pt-4 lg:shadow-[0_10px_30px_rgba(0,0,0,0.15)] lg:backdrop-blur-[5px]">
+        {/* Tách thành 2 khối: Khối 1 chứa Links, Khối 2 để chạy Video/GIF */}
+        <div className="grid grid-cols-1 gap-6 px-6 lg:grid-cols-2 lg:gap-4 items-start">
+          {/* Khối 1: Danh sách Liên kết (Links) */}
+          <div className="flex flex-col gap-2.5">
+            <div
+              className="section-label flex items-center gap-2 font-display text-[0.7rem] font-bold uppercase tracking-[0.15em] text-muted after:h-[1px] after:flex-1 after:bg-border"
+              aria-label="Useful Links"
+            >
+              📎 Links
+            </div>
 
-        {/* Bio Links List */}
-        <div className="links flex flex-col gap-2 px-6">
-          {bioLinks.map((link, index) => (
-            <LinkCard key={link.id} link={link} index={index} />
-          ))}
+            <div className="links flex flex-col gap-2">
+              {bioLinks.map((link, index) => (
+                <LinkCard key={link.id} link={link} index={index} />
+              ))}
+            </div>
+          </div>
+
+          {/* Khối 2: Trình phát Video / GIF tùy ý */}
+          <div className="flex flex-col gap-2.5">
+            <div
+              className="section-label flex items-center gap-2 font-display text-[0.7rem] font-bold uppercase tracking-[0.15em] text-muted after:h-[1px] after:flex-1 after:bg-border"
+              aria-label="Video and GIF Showcase"
+            >
+              🎬 Media Showcase
+            </div>
+
+            <MediaShowcase />
+          </div>
         </div>
 
         {/* Section Divider */}

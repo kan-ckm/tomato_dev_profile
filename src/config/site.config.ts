@@ -3,3 +3,4 @@ export * from "./links.config";
 export * from "./projects.config";
 export * from "./music.config";
 export * from "./clock.config";
+export * from "./media.config";
