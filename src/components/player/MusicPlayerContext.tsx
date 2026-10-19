@@ -327,9 +327,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
         onPause={() => setIsPlaying(false)}
         onEnded={nextTrack}
         onError={() => {
-          if (currentTrackIndex < playlist.length - 1) {
-            nextTrack();
-          }
+          setIsPlaying(false);
         }}
       />
       {children}

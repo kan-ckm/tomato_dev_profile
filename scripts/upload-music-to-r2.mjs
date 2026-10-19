@@ -119,16 +119,15 @@ async function uploadFile(fileName) {
   }
 
   console.log(`🚀 [ĐANG TẢI LÊN] ${fileName} (${sizeMB} MB)...`);
-  const fileStream = fs.createReadStream(filePath);
+  const fileBuffer = fs.readFileSync(filePath);
 
   await s3.send(
     new PutObjectCommand({
       Bucket: bucketName,
       Key: key,
-      Body: fileStream,
+      Body: fileBuffer,
       ContentType: "audio/mpeg",
       CacheControl: "public, max-age=31536000, immutable",
-      ContentLength: fileStat.size,
     })
   );
 
