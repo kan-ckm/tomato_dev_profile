@@ -22,7 +22,7 @@ export default function HomePage() {
             </span>
           </div>
           <span className="h-[1px] flex-1 bg-border" />
-          <span className="text-[0.62rem] lowercase tracking-normal text-muted/60">
+          <span className="text-[0.68rem] font-medium lowercase tracking-normal text-muted">
             scroll ↓
           </span>
         </div>
@@ -71,7 +71,7 @@ export default function HomePage() {
         <TikTokCard />
 
         {/* Footer */}
-        <footer className="bio-footer mt-10 text-center text-[0.7rem] tracking-[0.06em] text-[rgba(240,237,247,0.2)] lg:!mt-[30px]">
+        <footer className="bio-footer mt-10 text-center text-[0.72rem] tracking-[0.06em] text-muted lg:!mt-[30px]">
           <p>
             {profileConfig.footer.text}{" "}
             <a

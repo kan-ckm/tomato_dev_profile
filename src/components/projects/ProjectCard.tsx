@@ -95,7 +95,7 @@ export function ProjectCard({ project }: { project: ProjectItem }) {
         <h3 className="mb-3 font-display text-[1.45rem] font-bold tracking-[-0.01em] text-white max-md:mb-2.5 max-md:text-[1.2rem]">
           {project.title}
         </h3>
-        <p className="project-desc mb-6 line-clamp-4 text-[0.9rem] font-light leading-[1.7] text-muted max-md:mb-3 max-md:line-clamp-3 max-md:text-[0.82rem] max-md:leading-[1.4] max-md:text-[rgba(240,237,247,0.4)]">
+        <p className="project-desc mb-6 line-clamp-4 text-[0.9rem] font-light leading-[1.7] text-muted max-md:mb-3 max-md:line-clamp-3 max-md:text-[0.85rem] max-md:leading-[1.5]">
           {project.description}
         </p>
       </div>

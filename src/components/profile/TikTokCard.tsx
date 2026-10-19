@@ -112,7 +112,7 @@ export function TikTokCard() {
               >
                 {followers}
               </span>
-              <span className="mt-[1px] text-[0.62rem] font-medium uppercase tracking-[0.08em] text-muted">
+              <span className="mt-[2px] text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-muted">
                 Followers
               </span>
             </div>
@@ -124,7 +124,7 @@ export function TikTokCard() {
               >
                 {likes}
               </span>
-              <span className="mt-[1px] text-[0.62rem] font-medium uppercase tracking-[0.08em] text-muted">
+              <span className="mt-[2px] text-[0.68rem] font-semibold uppercase tracking-[0.08em] text-muted">
                 Likes
               </span>
             </div>
@@ -137,7 +137,7 @@ export function TikTokCard() {
         href={profileConfig.tiktok.followUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="relative mx-4 mb-4 flex w-[calc(100%-32px)] items-center justify-center gap-2 overflow-hidden rounded-lg border border-white/[0.12] bg-gradient-to-br from-[#010101] to-[#1a1a1a] px-4 py-2.5 font-display text-[0.82rem] font-semibold tracking-[0.04em] text-white no-underline transition-all duration-200 hover:-translate-y-[1px] hover:border-[rgba(105,185,242,0.4)] hover:shadow-[0_6px_20px_rgba(105,185,242,0.15)]"
+        className="relative mx-4 mb-4 flex w-[calc(100%-32px)] items-center justify-center gap-2 overflow-hidden rounded-lg border border-white/20 bg-white/[0.06] px-4 py-2.5 font-display text-[0.82rem] font-semibold tracking-[0.04em] text-white no-underline transition-all duration-200 hover:-translate-y-[1px] hover:border-white hover:bg-white hover:text-black hover:shadow-[0_6px_20px_rgba(255,255,255,0.2)]"
       >
         Follow on TikTok
       </a>

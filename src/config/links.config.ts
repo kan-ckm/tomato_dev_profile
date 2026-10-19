@@ -6,20 +6,11 @@ import { BioLink } from "@/types";
  */
 export const bioLinks: BioLink[] = [
   {
-    id: "link-mixelart-mcmodel",
-    title: "MixelArt MCModels",
-    subtitle: "mcmodels.net/vendors/307/mixelart",
-    url: "https://mcmodels.net/vendors/307/mixelart",
-    iconSrc: "/assets/link/mcmodel.webp",
-    iconBg: "linear-gradient(135deg,#1a1a2e,#16213e)",
-    fallbackEmoji: "🎭",
-  },
-  {
-    id: "link-ysm-discord",
+    id: "link-ReDreaming-discord",
     title: "Official Community • Discord",
-    subtitle: "discord.gg/ysm-team",
-    url: "https://discord.gg/ysm-team",
-    iconSrc: "/assets/link/ysm.webp",
+    subtitle: "discord.gg/ReDreaming",
+    url: "https://discord.gg/EVegtwFUw",
+    iconSrc: "/assets/link/lilith.png",
     iconBg: "linear-gradient(135deg,#1a1a2e,#16213e)",
     fallbackSvg: "discord",
   }

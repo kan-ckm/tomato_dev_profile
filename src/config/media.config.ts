@@ -58,12 +58,12 @@ export interface MediaBlockConfig {
  * 👉 NHẬP THÔNG TIN CHO KHỐI CỦA BẠN TẠI ĐÂY:
  */
 export const mediaBlockConfig: MediaBlockConfig = {
-  src: "/assets/media/cosmic-princess-kaguya-yachiyo.gif",
+  src: "/assets/media/showcase.gif",
   type: "auto",
   title: "GIF / Video",
   subtitle: "",
   linkUrl: "",
-  aspectRatio: "16/9",
+  aspectRatio: "4/3",
   autoPlay: true,
   loop: true,
   muted: true,

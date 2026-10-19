@@ -19,7 +19,7 @@ const config: Config = {
         accent2: "#d4d4d8",
         accent3: "#a1a1aa",
         text: "#f4f4f5",
-        muted: "rgba(244, 244, 245, 0.5)",
+        muted: "rgba(244, 244, 245, 0.72)",
       },
       fontFamily: {
         sans: ["'DM Sans'", "sans-serif"],
