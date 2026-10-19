@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { useMusicPlayer } from "./MusicPlayerContext";
 import { cn, formatTime } from "@/lib/utils";
 
@@ -29,13 +29,55 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
     setIsPlaylistExpanded,
   } = useMusicPlayer();
 
-  const progressPercent = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const [isScrubbing, setIsScrubbing] = useState<boolean>(false);
+  const [scrubPercent, setScrubPercent] = useState<number>(0);
 
-  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const progressPercent = isScrubbing
+    ? scrubPercent
+    : duration > 0
+    ? Math.max(0, Math.min(100, (currentTime / duration) * 100))
+    : 0;
+
+  const seekFromPointer = useCallback(
+    (clientX: number, commit = false) => {
+      if (!progressBarRef.current) return;
+      const rect = progressBarRef.current.getBoundingClientRect();
+      if (rect.width <= 0) return;
+      const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      setScrubPercent(pct * 100);
+      if (commit) {
+        seekToPercent(pct);
+      }
+    },
+    [seekToPercent]
+  );
+
+  const handlePointerDown = (clientX: number) => {
     onUserInteraction?.();
-    const rect = e.currentTarget.getBoundingClientRect();
-    const pct = (e.clientX - rect.left) / rect.width;
-    seekToPercent(pct);
+    setIsScrubbing(true);
+    seekFromPointer(clientX, false);
+
+    const onPointerMove = (e: MouseEvent | TouchEvent) => {
+      const x = "touches" in e ? e.touches[0].clientX : e.clientX;
+      seekFromPointer(x, false);
+    };
+
+    const onPointerUp = (e: MouseEvent | TouchEvent) => {
+      const x =
+        "changedTouches" in e ? e.changedTouches[0].clientX : (e as MouseEvent).clientX;
+      seekFromPointer(x, true);
+      setIsScrubbing(false);
+      window.removeEventListener("mousemove", onPointerMove);
+      window.removeEventListener("mouseup", onPointerUp);
+      window.removeEventListener("touchmove", onPointerMove);
+      window.removeEventListener("touchend", onPointerUp);
+    };
+
+    window.addEventListener("mousemove", onPointerMove);
+    window.addEventListener("mouseup", onPointerUp);
+    window.addEventListener("touchmove", onPointerMove, { passive: false });
+    window.addEventListener("touchend", onPointerUp);
   };
 
   const renderVolumeIcon = () => {
@@ -72,15 +114,39 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
         </div>
       </div>
 
-      {/* Progress Bar */}
+      {/* Progress / Timeline Bar with Visible Thumb Dot ("dấu .") */}
       <div
-        onClick={handleProgressClick}
-        className="player-progress relative mb-5 h-1.5 w-full cursor-pointer overflow-hidden rounded-[3px] bg-white/[0.05]"
+        ref={progressBarRef}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          handlePointerDown(e.clientX);
+        }}
+        onTouchStart={(e) => {
+          if (e.touches.length > 0) {
+            handlePointerDown(e.touches[0].clientX);
+          }
+        }}
+        className="player-progress group relative mb-4 flex h-6 w-full cursor-pointer items-center select-none"
+        role="slider"
+        aria-label="Audio progress"
+        aria-valuenow={currentTime}
+        aria-valuemin={0}
+        aria-valuemax={duration || 100}
       >
-        <div
-          className="h-full rounded-[3px] bg-gradient-to-r from-accent to-accent2 transition-[width] duration-100 ease-linear"
-          style={{ width: `${progressPercent}%` }}
-        />
+        {/* Background Track Bar */}
+        <div className="relative h-1.5 w-full rounded-full bg-white/20 transition-all duration-200 group-hover:h-2">
+          {/* Played Progress Fill */}
+          <div
+            className="h-full rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.7)] transition-[width] duration-75 ease-out"
+            style={{ width: `${progressPercent}%` }}
+          />
+
+          {/* Interactive Thumb Dot ("Dấu .") */}
+          <div
+            className="pointer-events-none absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-black/20 bg-white shadow-[0_0_10px_rgba(255,255,255,0.95),0_1px_4px_rgba(0,0,0,0.6)] transition-transform duration-150 ease-out group-hover:scale-125"
+            style={{ left: `${progressPercent}%` }}
+          />
+        </div>
       </div>
 
       {/* Controls */}
@@ -134,7 +200,7 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
             </svg>
           </button>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               title="Mute/Unmute"
@@ -156,6 +222,9 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
               max="1"
               step="0.01"
               value={volume}
+              style={{
+                background: `linear-gradient(to right, #ffffff ${volume * 100}%, rgba(255, 255, 255, 0.2) ${volume * 100}%)`,
+              }}
               onChange={(e) => {
                 onUserInteraction?.();
                 setVolume(parseFloat(e.target.value));

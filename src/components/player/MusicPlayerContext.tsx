@@ -272,13 +272,21 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
     [loadAndPlayTrack]
   );
 
-  const seekToPercent = useCallback((percent: number) => {
-    const audio = audioRef.current;
-    if (!audio || !audio.duration || isNaN(audio.duration)) return;
-    const clamped = Math.max(0, Math.min(1, percent));
-    audio.currentTime = clamped * audio.duration;
-    setCurrentTime(audio.currentTime);
-  }, []);
+  const seekToPercent = useCallback(
+    (percent: number) => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      const dur =
+        audio.duration && isFinite(audio.duration) && audio.duration > 0
+          ? audio.duration
+          : duration;
+      if (!dur || isNaN(dur) || dur <= 0) return;
+      const clamped = Math.max(0, Math.min(1, percent));
+      audio.currentTime = clamped * dur;
+      setCurrentTime(audio.currentTime);
+    },
+    [duration]
+  );
 
   const setVolume = useCallback((val: number) => {
     const clamped = Math.max(0, Math.min(1, val));
@@ -333,19 +341,32 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
         id="bg-music"
         preload="auto"
         onTimeUpdate={() => {
-          const now = performance.now();
-          if (now - lastUpdateRef.current < 200) return;
-          lastUpdateRef.current = now;
           if (audioRef.current) {
-            setCurrentTime(audioRef.current.currentTime);
-            localStorage.setItem(
-              "music_current_time",
-              String(audioRef.current.currentTime)
-            );
+            const cur = audioRef.current.currentTime;
+            setCurrentTime(cur);
+            const dur = audioRef.current.duration;
+            if (dur && isFinite(dur) && dur > 0) {
+              setDuration(dur);
+            }
+            const now = performance.now();
+            if (now - lastUpdateRef.current >= 1000) {
+              lastUpdateRef.current = now;
+              localStorage.setItem("music_current_time", String(cur));
+            }
+          }
+        }}
+        onDurationChange={() => {
+          if (audioRef.current && isFinite(audioRef.current.duration) && audioRef.current.duration > 0) {
+            setDuration(audioRef.current.duration);
           }
         }}
         onLoadedMetadata={() => {
-          if (audioRef.current && !isNaN(audioRef.current.duration)) {
+          if (audioRef.current && isFinite(audioRef.current.duration) && audioRef.current.duration > 0) {
+            setDuration(audioRef.current.duration);
+          }
+        }}
+        onCanPlay={() => {
+          if (audioRef.current && isFinite(audioRef.current.duration) && audioRef.current.duration > 0) {
             setDuration(audioRef.current.duration);
           }
         }}
@@ -355,11 +376,14 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
         onError={() => {
           const audio = audioRef.current;
           const track = playlist[currentTrackIndex];
-          if (audio && track && track.url && audio.src === track.url) {
-            console.warn("[MusicPlayer] R2 CDN stream failed, falling back to local file:", track.file);
-            audio.src = `/assets/music/${encodeURIComponent(track.file)}`;
-            audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
-            return;
+          if (audio && track && track.file) {
+            const localFallback = `/assets/music/${encodeURIComponent(track.file)}`;
+            if (audio.src !== localFallback && !audio.src.endsWith(encodeURIComponent(track.file))) {
+              console.warn("[MusicPlayer] Streaming failed, falling back to local file:", track.file);
+              audio.src = localFallback;
+              audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+              return;
+            }
           }
           setIsPlaying(false);
         }}
