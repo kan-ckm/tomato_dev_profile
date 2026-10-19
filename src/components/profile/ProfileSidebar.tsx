@@ -118,7 +118,7 @@ export function ProfileSidebar() {
             />
           </div>
 
-          <h1 className="mb-1 max-w-full whitespace-nowrap bg-gradient-to-br from-white to-accent3 bg-clip-text font-display text-[clamp(1.3rem,8vw,1.75rem)] font-bold leading-[1.1] tracking-[-0.02em] text-transparent">
+          <h1 className="mb-1 max-w-full whitespace-nowrap font-display text-[clamp(1.3rem,8vw,1.75rem)] font-extrabold leading-[1.1] tracking-[-0.02em] text-white drop-shadow-[0_2px_12px_rgba(255,255,255,0.25)]">
             {profileConfig.username}
           </h1>
           <div className="mb-3 text-[0.78rem] font-medium uppercase tracking-[0.12em] text-accent">

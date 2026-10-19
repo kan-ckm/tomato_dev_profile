@@ -2,9 +2,14 @@ import { ProjectItem } from "@/types";
 
 /**
  * Danh sách dự án hiển thị tại trang /projects.
- * Thêm hoặc chỉnh sửa phần tử tại đây sẽ tự động cập nhật cả Grid Desktop lẫn Slider Mobile.
+ * Hiện tại đang để trống (null/empty) theo yêu cầu.
+ * Khi cần thêm dự án, bạn chỉ cần mở comment mẫu bên dưới hoặc thêm object ProjectItem vào mảng.
  */
-export const projectsConfig: ProjectItem[] = [
+export const projectsConfig: ProjectItem[] = [];
+
+/*
+// Mẫu dự án cũ để khôi phục khi cần:
+export const previousProjectsBackup: ProjectItem[] = [
   {
     id: "freesia-ii",
     title: "Freesia II",
@@ -54,3 +59,4 @@ export const projectsConfig: ProjectItem[] = [
     repoUrl: "https://github.com/TomatoDevs/Orbitalstrike",
   },
 ];
+*/
