@@ -1,34 +1,74 @@
-export interface MediaShowcaseConfig {
-  title: string;
-  subtitle: string;
-  badge: string;
+/**
+ * CẤU HÌNH KHỐI GIF / VIDEO
+ * Bạn chỉ cần nhập các thông tin cần thiết vào object `mediaBlockConfig` dưới đây:
+ */
+export interface MediaBlockConfig {
   /**
-   * Đường dẫn video (.mp4, .webm) hoặc ảnh động (.gif, .webp, .png, .jpg).
-   * Bạn có thể đặt tệp vào thư mục `public/assets/media/` hoặc dùng đường dẫn URL online.
+   * Đường dẫn đến file GIF hoặc Video:
+   * - Tệp trong thư mục public: ví dụ "/assets/media/showcase.gif" hoặc "/assets/media/showcase.mp4"
+   * - Hoặc URL online bất kỳ (Giphy, Tenor, Imgur, Discord, Cloudflare...)
    */
   src: string;
+
   /**
-   * Ảnh thumbnail / poster hiển thị trước khi video phát hoặc khi tải
+   * Loại media:
+   * - "auto": tự động nhận diện theo đuôi file (.mp4, .webm, .mov -> video; .gif, .webp, .png, .jpg -> gif/ảnh)
+   * - "video": phát dưới dạng video
+   * - "gif": hiển thị dưới dạng ảnh GIF / ảnh tĩnh
    */
-  poster?: string;
-  description?: string;
+  type?: "auto" | "video" | "gif";
+
+  /**
+   * Tiêu đề hiển thị trên khối (tùy chọn, để trống "" nếu không muốn hiển thị tiêu đề)
+   */
+  title?: string;
+
+  /**
+   * Chú thích ngắn bên dưới (tùy chọn, để trống "" nếu không muốn hiển thị)
+   */
+  subtitle?: string;
+
+  /**
+   * Đường dẫn web khi click vào khối (tùy chọn, ví dụ link shop, Discord, YouTube... Để trống "" nếu không muốn click)
+   */
   linkUrl?: string;
-  linkLabel?: string;
+
+  /**
+   * Tỷ lệ khung hình: "16/9" | "4/3" | "1/1" | "auto" (mặc định "16/9")
+   */
+  aspectRatio?: "16/9" | "4/3" | "1/1" | "auto";
+
+  /**
+   * Tự động phát (mặc định: true)
+   */
   autoPlay?: boolean;
+
+  /**
+   * Tự động lặp lại (mặc định: true)
+   */
   loop?: boolean;
+
+  /**
+   * Tắt tiếng video khi phát tự động (mặc định: true)
+   */
   muted?: boolean;
 }
 
-export const mediaShowcaseConfig: MediaShowcaseConfig = {
-  title: "Media Showcase",
-  subtitle: "YSM Model & Animation Preview",
-  badge: "GIF / VIDEO",
-  src: "/assets/media/showcase.mp4",
-  poster: "/assets/images/background_avartar.jpg",
-  description: "Custom video & animated GIF showcase player.",
-  linkUrl: "https://discord.gg/ysm-team",
-  linkLabel: "Join Community",
+/**
+ * 👉 NHẬP THÔNG TIN CHO KHỐI CỦA BẠN TẠI ĐÂY:
+ */
+export const mediaBlockConfig: MediaBlockConfig = {
+  src: "/assets/media/cosmic-princess-kaguya-yachiyo.gif",
+  type: "auto",
+  title: "GIF / Video",
+  subtitle: "",
+  linkUrl: "",
+  aspectRatio: "16/9",
   autoPlay: true,
   loop: true,
   muted: true,
 };
+
+// Alias tương thích
+export const mediaShowcaseConfig = mediaBlockConfig;
+export type MediaShowcaseConfig = MediaBlockConfig;

@@ -33,12 +33,12 @@ export default function HomePage() {
           ))}
         </div>
 
-        {/* Khối 2: Trình phát Video / GIF tùy ý (xếp ở dưới khối link theo hàng dọc) */}
+        {/* Khối 2: Khối GIF / Video tùy ý (xếp ở dưới khối link theo hàng dọc) */}
         <div
-          className="section-label mx-6 mb-3 mt-8 flex items-center gap-2.5 font-display text-[0.7rem] font-bold uppercase tracking-[0.15em] text-muted after:h-[1px] after:flex-1 after:bg-border"
-          aria-label="Video and GIF Showcase"
+          className="section-label mx-6 mb-3 mt-7 flex items-center gap-2.5 font-display text-[0.7rem] font-bold uppercase tracking-[0.15em] text-muted after:h-[1px] after:flex-1 after:bg-border"
+          aria-label="GIF and Video"
         >
-          🎬 Media Showcase
+          🎬 Media
         </div>
 
         <div className="media-container px-6">
