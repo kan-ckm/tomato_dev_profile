@@ -13,15 +13,21 @@ export default function HomePage() {
 
       {/* Right Main Content (Scrollable on Desktop) */}
       <main className="main-content custom-scrollbar lg:h-[calc(100vh-60px)] lg:overflow-y-auto lg:rounded-panel lg:border lg:border-white/[0.05] lg:bg-white/[0.02] lg:pb-[30px] lg:pt-2.5 lg:shadow-[0_10px_30px_rgba(0,0,0,0.15)] lg:backdrop-blur-[5px]">
-        {/* Khối 1: Danh sách Liên kết (Links) */}
-        <div
-          className="section-label mx-6 mb-3 mt-7 flex items-center gap-2.5 font-display text-[0.7rem] font-bold uppercase tracking-[0.15em] text-muted after:h-[1px] after:flex-1 after:bg-border lg:!mt-5"
-          aria-label="Useful Links"
-        >
-          📎 Links
+        {/* Khối 1: Danh sách Liên kết (Links) - Giới hạn chiều cao & Cuộn mượt mà */}
+        <div className="section-header mx-6 mb-3 mt-7 flex items-center justify-between gap-2.5 font-display text-[0.7rem] font-bold uppercase tracking-[0.15em] text-muted lg:!mt-5">
+          <div className="flex items-center gap-2">
+            <span>📎 Links</span>
+            <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-0.5 text-[0.62rem] font-numeric text-muted">
+              {bioLinks.length}
+            </span>
+          </div>
+          <span className="h-[1px] flex-1 bg-border" />
+          <span className="text-[0.62rem] lowercase tracking-normal text-muted/60">
+            scroll ↓
+          </span>
         </div>
 
-        <div className="links flex flex-col gap-2 px-6">
+        <div className="links custom-scrollbar mx-6 flex max-h-[265px] flex-col gap-2 overflow-y-auto pr-1.5 py-1">
           {bioLinks.map((link, index) => (
             <LinkCard key={link.id} link={link} index={index} />
           ))}
