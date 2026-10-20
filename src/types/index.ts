@@ -29,6 +29,7 @@ export interface ProjectItem {
   badgeLabel: string;
   glowVariant: ProjectGlowVariant;
   iconSrc: string;
+  image?: string;
   languages: string[];
   repoUrl: string;
   buttonLabel?: string;

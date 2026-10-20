@@ -6,17 +6,32 @@ import { ProjectItem } from "@/types";
  */
 export const projectsConfig: ProjectItem[] = [
   {
-    id: "my-web-project",
-    title: "My Web App",
+    id: "register",
+    title: "Register & Auth App",
     description:
-      "A modern, responsive web application built with Next.js, TypeScript and Tailwind CSS.",
+      "A modern, interactive sliding authentication interface (Register & Login) with smooth transitions, built with Next.js 15, React 19, TypeScript, and Tailwind CSS.",
     badgeType: "web",
     badgeLabel: "Web App",
     glowVariant: "web",
-    iconSrc: "/assets/images/og-image.png",
-    languages: ["TypeScript", "Next.js", "React"],
-    repoUrl: "https://github.com/kan-ckm",
-    buttonLabel: "Visit Website",
+    iconSrc: "/assets/project_img/register_showcase.png",
+    image: "/assets/project_img/register_showcase.png",
+    languages: ["Next.js", "TypeScript", "React", "Tailwind CSS"],
+    repoUrl: "https://github.com/kan-ckm/register",
+    buttonLabel: "View Repository",
+  },
+  {
+    id: "tomato-commerce",
+    title: "Tomato Store & Commerce",
+    description:
+      "A fullstack e-commerce platform with Stripe international payments, Cloudinary CDN streaming, JWT authentication, and an Admin Analytics Dashboard.",
+    badgeType: "web",
+    badgeLabel: "E-Commerce",
+    glowVariant: "ecolens",
+    iconSrc: "/assets/project_img/ecome_showcase.png",
+    image: "/assets/project_img/ecome_showcase.png",
+    languages: ["React", "Node.js", "Express", "MongoDB", "Stripe", "Tailwind CSS"],
+    repoUrl: "https://github.com/kan-ckm/tomato_Commerce",
+    buttonLabel: "View Repository",
   },
 ];
 

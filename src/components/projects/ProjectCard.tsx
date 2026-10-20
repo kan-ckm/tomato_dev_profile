@@ -75,20 +75,61 @@ const BADGE_HOVER_CLASS_MAP: Record<ProjectBadgeType, string> = {
 };
 
 export function ProjectCard({ project }: { project: ProjectItem }) {
+  const bgImage = project.image || project.iconSrc;
+  const hasSeparateIcon = Boolean(project.image && project.image !== project.iconSrc);
+
   return (
     <div
       className={cn(
-        "project-card group relative flex h-full flex-col overflow-hidden rounded-panel border border-white/[0.05] bg-white/[0.02] px-6 py-8 shadow-[0_10px_30px_rgba(0,0,0,0.15)] backdrop-blur-[5px] transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]",
+        "project-card group relative flex h-full flex-col justify-between overflow-hidden rounded-panel border border-white/[0.08] bg-[#09090d]/80 px-6 py-7 shadow-[0_10px_30px_rgba(0,0,0,0.25)] backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]",
         "before:pointer-events-none before:absolute before:inset-0 before:z-[6] before:bg-gradient-to-br before:from-accent before:to-transparent before:opacity-0 before:transition-opacity before:duration-500",
-        "md:hover:-translate-y-3 md:hover:border-border-hover md:hover:shadow-[0_30px_60px_rgba(0,0,0,0.4),0_0_20px_rgba(255,255,255,0.15)] md:hover:before:opacity-[0.08]",
-        "max-md:mx-[16vw] max-md:max-h-[50vh] max-md:min-h-[360px] max-md:w-[68vw] max-md:shrink-0 max-md:items-center max-md:justify-between max-md:px-5 max-md:pb-5 max-md:pt-6 max-md:text-center",
-        "max-[480px]:mx-[15vw] max-[480px]:min-h-[340px] max-[480px]:w-[70vw] max-[480px]:px-4 max-[480px]:pb-4 max-[480px]:pt-6"
+        "md:hover:-translate-y-3 md:hover:border-white/25 md:hover:shadow-[0_30px_60px_rgba(0,0,0,0.5),0_0_25px_rgba(255,255,255,0.12)] md:hover:before:opacity-[0.05]",
+        "max-md:mx-[16vw] max-md:max-h-[55vh] max-md:min-h-[380px] max-md:w-[68vw] max-md:shrink-0 max-md:px-5 max-md:pb-6 max-md:pt-5",
+        "max-[480px]:mx-[15vw] max-[480px]:min-h-[360px] max-[480px]:w-[70vw] max-[480px]:px-4 max-[480px]:pb-5 max-[480px]:pt-4"
       )}
     >
-      {/* Platform Badge */}
+      {/* Background Image toàn khối: đỉnh rõ nét, dưới mờ dần */}
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        {/* Glow hiệu ứng riêng cho từng project variant */}
+        <div
+          className={cn(
+            "icon-glow pointer-events-none !inset-auto !-left-10 !-top-10 !h-48 !w-48 !opacity-40",
+            GLOW_CLASS_MAP[project.glowVariant]
+          )}
+        />
+
+        {/* Ảnh nền phủ toàn khối */}
+        <img
+          src={bgImage}
+          alt={project.title}
+          className="h-full w-full object-cover object-top transition-transform duration-700 ease-out group-hover:scale-105"
+        />
+
+        {/* Lớp gradient làm tối tăng dần: đỉnh hoàn toàn trong suốt (rõ nét), dưới tối dần để tương phản chữ */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(to bottom, rgba(5,5,8,0) 0%, rgba(5,5,8,0.15) 28%, rgba(5,5,8,0.7) 55%, rgba(5,5,8,0.95) 80%, #050508 100%)",
+          }}
+        />
+
+        {/* Lớp làm mờ nhòe (backdrop-blur) tăng dần từ giữa về đáy khối: đỉnh không mờ (rõ), nửa dưới mờ dần */}
+        <div
+          className="absolute inset-0 backdrop-blur-[10px]"
+          style={{
+            maskImage:
+              "linear-gradient(to bottom, transparent 0%, transparent 28%, black 65%, black 100%)",
+            WebkitMaskImage:
+              "linear-gradient(to bottom, transparent 0%, transparent 28%, black 65%, black 100%)",
+          }}
+        />
+      </div>
+
+      {/* Platform Badge ở góc trên bên phải */}
       <div
         className={cn(
-          "platform-badge absolute right-6 top-6 z-[8] flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.05] px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-muted transition-all duration-300",
+          "platform-badge absolute right-5 top-5 z-[8] flex items-center gap-1.5 rounded-full border border-white/15 bg-black/40 px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-white/90 backdrop-blur-md transition-all duration-300 shadow-sm",
           "max-md:right-4 max-md:top-4 max-md:px-2.5 max-md:py-1 max-md:text-[0.55rem]",
           BADGE_HOVER_CLASS_MAP[project.badgeType]
         )}
@@ -97,60 +138,63 @@ export function ProjectCard({ project }: { project: ProjectItem }) {
         {project.badgeLabel}
       </div>
 
-      {/* Project Icon + Morphing Glow */}
-      <div className="project-icon relative z-[7] mb-[30px] flex h-[90px] w-[90px] items-center justify-center max-md:mb-3 max-md:h-16 max-md:w-16">
-        <div className={cn("icon-glow", GLOW_CLASS_MAP[project.glowVariant])} />
-        <img
-          src={project.iconSrc}
-          alt={`${project.title} Icon`}
-          className="relative z-[7] block h-[90%] w-[90%] rounded-full object-cover"
-        />
+      {/* Khoảng trống đỉnh khối (Top Hero) để hiển thị hình ảnh rõ nét */}
+      <div className="relative z-[7] mb-4 flex h-32 w-full items-start max-md:h-24">
+        {hasSeparateIcon && (
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/20 bg-black/50 p-2 shadow-lg backdrop-blur-md">
+            <img
+              src={project.iconSrc}
+              alt={`${project.title} Icon`}
+              className="h-full w-full rounded-lg object-contain"
+            />
+          </div>
+        )}
       </div>
 
-      {/* Content */}
-      <div className="project-content relative z-[7] flex-1">
-        <h3 className="mb-3 font-display text-[1.45rem] font-bold tracking-[-0.01em] text-white max-md:mb-2.5 max-md:text-[1.2rem]">
+      {/* Nội dung khối (Content): nằm ở phần dưới mờ */}
+      <div className="relative z-[7] flex flex-1 flex-col justify-end">
+        <h3 className="mb-2 font-display text-[1.4rem] font-bold tracking-[-0.01em] text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)] max-md:mb-1.5 max-md:text-[1.15rem]">
           {project.title}
         </h3>
-        <p className="project-desc mb-6 line-clamp-4 text-[0.9rem] font-light leading-[1.7] text-muted max-md:mb-3 max-md:line-clamp-3 max-md:text-[0.85rem] max-md:leading-[1.5]">
+        <p className="project-desc mb-5 line-clamp-3 text-[0.88rem] font-light leading-[1.65] text-white/75 drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)] max-md:mb-3 max-md:text-[0.8rem] max-md:leading-[1.45]">
           {project.description}
         </p>
-      </div>
 
-      {/* Language Tags */}
-      <div className="project-meta relative z-[7] mb-7 flex flex-wrap items-center gap-2 max-md:mb-4 max-md:justify-center max-md:gap-1.5">
-        {project.languages.map((lang) => (
-          <span
-            key={lang}
-            className="lang-tag rounded-lg border border-accent/15 bg-accent/10 px-3 py-[5px] text-[0.6rem] font-extrabold uppercase tracking-[0.05em] text-accent transition-all duration-300"
-          >
-            {lang}
-          </span>
-        ))}
-      </div>
+        {/* Language Tags */}
+        <div className="project-meta mb-6 flex flex-wrap items-center gap-1.5 max-md:mb-4 max-md:gap-1">
+          {project.languages.map((lang) => (
+            <span
+              key={lang}
+              className="lang-tag rounded-md border border-white/10 bg-black/40 px-2.5 py-1 text-[0.62rem] font-bold uppercase tracking-[0.05em] text-white/90 backdrop-blur-sm transition-all duration-300 group-hover:border-accent/30 group-hover:text-accent"
+            >
+              {lang}
+            </span>
+          ))}
+        </div>
 
-      {/* Repository Link Button */}
-      <a
-        href={project.repoUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="repo-btn relative z-[7] flex items-center justify-center gap-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3.5 font-display text-[0.85rem] font-semibold text-white no-underline transition-all duration-300 hover:scale-[1.02] hover:border-accent hover:bg-white/[0.12] hover:text-white hover:shadow-[0_0_20px_rgba(255,255,255,0.25)] max-md:w-full max-md:rounded-xl max-md:p-3 max-md:text-[0.8rem]"
-      >
-        {project.buttonLabel || (project.badgeType === "web" ? "Visit Website" : "View Repository")}
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+        {/* Repository Link Button */}
+        <a
+          href={project.repoUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="repo-btn relative flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 p-3 font-display text-[0.82rem] font-semibold text-white no-underline backdrop-blur-md transition-all duration-300 hover:scale-[1.02] hover:border-accent hover:bg-white/20 hover:text-white hover:shadow-[0_0_20px_rgba(255,255,255,0.25)] max-md:w-full max-md:p-2.5 max-md:text-[0.78rem]"
         >
-          <line x1="7" y1="17" x2="17" y2="7" />
-          <polyline points="7 7 17 7 17 17" />
-        </svg>
-      </a>
+          {project.buttonLabel || (project.badgeType === "web" ? "Visit Website" : "View Repository")}
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="7" y1="17" x2="17" y2="7" />
+            <polyline points="7 7 17 7 17 17" />
+          </svg>
+        </a>
+      </div>
     </div>
   );
 }
