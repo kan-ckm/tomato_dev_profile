@@ -16,7 +16,7 @@ export default function HomePage() {
         {/* Khối 1: Danh sách Liên kết (Links) - Giới hạn chiều cao & Cuộn mượt mà */}
         <div className="section-header mx-6 mb-3 mt-7 flex items-center justify-between gap-2.5 font-display text-[0.7rem] font-bold uppercase tracking-[0.15em] text-muted lg:!mt-5">
           <div className="flex items-center gap-2">
-            <span>📎 Links</span>
+            <span>Links</span>
             <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-0.5 text-[0.62rem] font-numeric text-muted">
               {bioLinks.length}
             </span>
@@ -38,7 +38,7 @@ export default function HomePage() {
           className="section-label mx-6 mb-3 mt-7 flex items-center gap-2.5 font-display text-[0.7rem] font-bold uppercase tracking-[0.15em] text-muted after:h-[1px] after:flex-1 after:bg-border"
           aria-label="GIF and Video"
         >
-          🎬 Media
+          Media
         </div>
 
         <div className="media-container px-6">

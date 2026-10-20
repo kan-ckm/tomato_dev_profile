@@ -60,7 +60,7 @@ export interface MediaBlockConfig {
 export const mediaBlockConfig: MediaBlockConfig = {
   src: "/assets/media/showcase.gif",
   type: "auto",
-  title: "GIF / Video",
+  title: "",
   subtitle: "",
   linkUrl: "",
   aspectRatio: "4/3",
