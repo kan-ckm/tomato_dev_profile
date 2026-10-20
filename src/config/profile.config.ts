@@ -18,7 +18,7 @@ export const profileConfig: ProfileConfig = {
     handle: "@tomatodevs",
     profileUrl: "https://www.tiktok.com/@tuanttuu",
     followUrl: "https://www.tiktok.com/@tuanttuu",
-    fallbackFollowers: 1885,
+    fallbackFollowers: 992,
     fallbackLikes: 32400,
   },
   footer: {

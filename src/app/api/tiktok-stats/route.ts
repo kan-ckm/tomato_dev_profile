@@ -9,8 +9,17 @@ import {
 import { checkRateLimit, getCorsHeaders } from "@/lib/security";
 import { TikTokStatsResponse } from "@/types";
 
-const TIKTOK_USERNAME = (process.env.TIKTOK_USERNAME || "tomatodevs").replace(/^@/, "");
-const TIKTOK_PROFILE_URL = `https://www.tiktok.com/@${encodeURIComponent(TIKTOK_USERNAME)}`;
+function getTikTokUsername(): string {
+  if (process.env.TIKTOK_USERNAME) {
+    return process.env.TIKTOK_USERNAME.replace(/^@/, "").trim();
+  }
+  const urlMatch = profileConfig.tiktok.profileUrl?.match(/@([\w.-]+)/);
+  if (urlMatch) return urlMatch[1];
+  if (profileConfig.tiktok.handle) {
+    return profileConfig.tiktok.handle.replace(/^@/, "").trim();
+  }
+  return "tuanttuu";
+}
 
 const FALLBACK: TikTokStatsResponse = {
   followers_raw: profileConfig.tiktok.fallbackFollowers,
@@ -26,24 +35,19 @@ async function scrapeTikTokProfile(): Promise<{
   followersRaw: number;
   likesRaw: number;
 }> {
-  const res = await fetch(TIKTOK_PROFILE_URL, {
+  const username = getTikTokUsername();
+  const profileUrl = `https://www.tiktok.com/@${encodeURIComponent(username)}`;
+
+  const res = await fetch(profileUrl, {
     headers: {
       "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " +
-        "AppleWebKit/537.36 (KHTML, like Gecko) " +
-        "Chrome/124.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Mobile/15E148 Safari/604.1",
       Accept:
-        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.9",
-      "Cache-Control": "no-cache",
-      "Sec-Ch-Ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
-      "Sec-Ch-Ua-Mobile": "?0",
-      "Sec-Ch-Ua-Platform": '"Windows"',
+        "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
       "Sec-Fetch-Dest": "document",
       "Sec-Fetch-Mode": "navigate",
       "Sec-Fetch-Site": "none",
-      "Sec-Fetch-User": "?1",
-      "Upgrade-Insecure-Requests": "1",
     },
     redirect: "follow",
     signal: AbortSignal.timeout(8000),
@@ -59,7 +63,7 @@ async function scrapeTikTokProfile(): Promise<{
   let followersRaw = 0;
   let likesRaw = 0;
 
-  // Cách 1: Trích xuất từ __UNIVERSAL_DATA_FOR_REHYDRATION__
+  // Cách 1: Trích xuất từ __UNIVERSAL_DATA_FOR_REHYDRATION__ (chuẩn nhất cho mobile view)
   const scriptMatch = html.match(
     /<script\s+id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\s\S]*?)<\/script>/
   );
@@ -67,12 +71,19 @@ async function scrapeTikTokProfile(): Promise<{
   if (scriptMatch) {
     try {
       const json = JSON.parse(scriptMatch[1]);
-      for (const key of Object.keys(json)) {
-        const obj = json[key];
-        if (obj && typeof obj === "object" && ("followerCount" in obj || "fans" in obj)) {
-          followersRaw = Number(obj.followerCount ?? obj.fans ?? 0);
-          likesRaw = Number(obj.heartCount ?? obj.heart ?? obj.diggCount ?? 0);
-          break;
+      const userDetail = json["__DEFAULT_SCOPE__"]?.["webapp.user-detail"]?.userInfo;
+      if (userDetail?.stats) {
+        followersRaw = Number(userDetail.stats.followerCount ?? 0);
+        likesRaw = Number(userDetail.stats.heartCount ?? 0);
+      }
+      if (!followersRaw) {
+        for (const key of Object.keys(json)) {
+          const obj = json[key];
+          if (obj && typeof obj === "object" && ("followerCount" in obj || "fans" in obj)) {
+            followersRaw = Number(obj.followerCount ?? obj.fans ?? 0);
+            likesRaw = Number(obj.heartCount ?? obj.heart ?? obj.diggCount ?? 0);
+            break;
+          }
         }
       }
     } catch {
@@ -82,11 +93,11 @@ async function scrapeTikTokProfile(): Promise<{
 
   // Cách 2: Regex trực tiếp trên HTML
   if (!followersRaw) {
-    const fMatch = html.match(/"followerCount"\s*:\s*(\d+)/);
+    const fMatch = html.match(/"followerCount"\s*:\s*(\d+)/) || html.match(/"fans"\s*:\s*(\d+)/);
     if (fMatch) followersRaw = parseInt(fMatch[1], 10);
   }
   if (!likesRaw) {
-    const lMatch = html.match(/"heartCount"\s*:\s*(\d+)/);
+    const lMatch = html.match(/"heartCount"\s*:\s*(\d+)/) || html.match(/"heart"\s*:\s*(\d+)/);
     if (lMatch) likesRaw = parseInt(lMatch[1], 10);
   }
 

@@ -6,7 +6,7 @@ import { formatShort } from "@/lib/utils";
 import { TikTokStatsResponse } from "@/types";
 
 const STATS_URL = "/api/tiktok-stats";
-const CACHE_KEY = "tt_stats_cache";
+const CACHE_KEY = "tt_stats_cache_v2";
 const CACHE_TTL = 30 * 60 * 1000; // 30 phút
 
 export function TikTokCard() {
