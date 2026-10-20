@@ -23,15 +23,16 @@ export const metadata: Metadata = {
   description: profileConfig.seo.description,
   icons: {
     icon: [
-      { url: "/assets/favicon/favicon-32x32.png", sizes: "32x32", type: "image/png" },
-      { url: "/assets/favicon/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/assets/favicon/favicon-32x32.png?v=2", sizes: "32x32", type: "image/png" },
+      { url: "/assets/favicon/favicon-16x16.png?v=2", sizes: "16x16", type: "image/png" },
+      { url: "/assets/favicon/favicon-48x48.png?v=2", sizes: "48x48", type: "image/png" },
     ],
-    shortcut: "/assets/favicon/favicon.ico",
+    shortcut: "/assets/favicon/favicon.ico?v=2",
     apple: [
-      { url: "/assets/favicon/apple-touch-icon.png", sizes: "180x180" },
+      { url: "/assets/favicon/apple-touch-icon.png?v=2", sizes: "180x180", type: "image/png" },
     ],
   },
-  manifest: "/assets/favicon/site.webmanifest",
+  manifest: "/assets/favicon/site.webmanifest?v=2",
   openGraph: {
     title: "TOMATODEVS — PROFILE",
     description: profileConfig.seo.description,
