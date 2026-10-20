@@ -33,7 +33,16 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: "/assets/:path*",
+        source: "/assets/favicon/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=0, must-revalidate",
+          },
+        ],
+      },
+      {
+        source: "/assets/:path((?!favicon).*)",
         headers: [
           {
             key: "Cache-Control",
