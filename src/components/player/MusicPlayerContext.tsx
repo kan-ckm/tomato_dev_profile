@@ -77,10 +77,8 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     let isMounted = true;
 
-    const savedPaused = localStorage.getItem("music_paused");
-    if (savedPaused === "true") {
-      isManuallyPausedRef.current = true;
-    }
+    // Đặt mặc định trạng thái sẵn sàng phát khi người dùng mở trang web
+    isManuallyPausedRef.current = false;
 
     const savedVol = localStorage.getItem("music_volume");
     const initialVol = savedVol !== null ? parseFloat(savedVol) : DEFAULT_VOLUME;
@@ -165,14 +163,17 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
     };
   }, []);
 
-  // Tự động phát nhạc khi người dùng tương tác lần đầu (nếu trước đó chưa bấm tạm dừng)
+  // Tự động phát nhạc:
+  // 1. Thử gọi audio.play() ngay khi vừa mở trang (nếu trình duyệt cho phép thì nhạc sẽ chạy liền).
+  // 2. Nếu trình duyệt chặn do chính sách Autoplay Policy, tự động kích hoạt ngay khi người dùng có tương tác đầu tiên (click, chạm màn hình, cuộn chuột, nhấn phím).
   useEffect(() => {
-    const tryAutoPlay = () => {
-      if (isManuallyPausedRef.current) {
-        window.removeEventListener("click", tryAutoPlay);
-        window.removeEventListener("touchstart", tryAutoPlay);
-        return;
-      }
+    const events = ["pointerdown", "touchstart", "click", "keydown", "wheel"] as const;
+
+    const cleanup = () => {
+      events.forEach((ev) => window.removeEventListener(ev, tryPlayOnGesture));
+    };
+
+    const tryPlayOnGesture = () => {
       const audio = audioRef.current;
       if (!audio || !audio.src) return;
 
@@ -180,23 +181,35 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
         .play()
         .then(() => {
           setIsPlaying(true);
-          localStorage.setItem("music_paused", "false");
-          window.removeEventListener("click", tryAutoPlay);
-          window.removeEventListener("touchstart", tryAutoPlay);
+          isManuallyPausedRef.current = false;
+          cleanup();
         })
         .catch(() => {
-          // Trình duyệt chặn autoplay cho tới khi có tương tác hợp lệ tiếp theo
+          // Nếu vẫn bị chặn thì giữ listener để thử lại ở cử chỉ tiếp theo
         });
     };
 
-    window.addEventListener("click", tryAutoPlay);
-    window.addEventListener("touchstart", tryAutoPlay);
+    // Thử phát ngay lập tức khi mở web
+    const audio = audioRef.current;
+    if (audio && audio.src) {
+      audio
+        .play()
+        .then(() => {
+          setIsPlaying(true);
+          isManuallyPausedRef.current = false;
+        })
+        .catch(() => {
+          // Trình duyệt chặn autoplay khi chưa có tương tác -> gắn sự kiện chờ cử chỉ đầu tiên
+          events.forEach((ev) => window.addEventListener(ev, tryPlayOnGesture, { passive: true }));
+        });
+    } else {
+      events.forEach((ev) => window.addEventListener(ev, tryPlayOnGesture, { passive: true }));
+    }
 
     return () => {
-      window.removeEventListener("click", tryAutoPlay);
-      window.removeEventListener("touchstart", tryAutoPlay);
+      cleanup();
     };
-  }, []);
+  }, [playlist]);
 
   const loadAndPlayTrack = useCallback(
     (index: number, autoPlay = true) => {
