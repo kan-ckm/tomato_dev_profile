@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { SnowBackground } from "@/components/background/SnowBackground";
-import { BgTextStrip } from "@/components/background/BgTextStrip";
+import { NeuralBackground } from "@/components/background/NeuralBackground";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { MusicPlayerProvider } from "@/components/player/MusicPlayerContext";
 import { FloatingPlayer } from "@/components/player/FloatingPlayer";
@@ -28,8 +27,7 @@ export function ClientShell({ children }: { children: React.ReactNode }) {
 
   return (
     <MusicPlayerProvider>
-      <SnowBackground />
-      <BgTextStrip />
+      <NeuralBackground />
       {children}
       <FloatingPlayer />
       <BottomNav />
