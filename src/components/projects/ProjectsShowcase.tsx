@@ -2,13 +2,19 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { projectsConfig } from "@/config/projects.config";
+import { ProjectItem } from "@/types";
 import { ProjectCard } from "./ProjectCard";
 import { cn } from "@/lib/utils";
 
-export function ProjectsShowcase() {
+interface ProjectsShowcaseProps {
+  initialProjects?: ProjectItem[];
+}
+
+export function ProjectsShowcase({ initialProjects }: ProjectsShowcaseProps = {}) {
   const gridRef = useRef<HTMLDivElement>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const totalProjects = projectsConfig.length;
+  const projects = initialProjects && initialProjects.length > 0 ? initialProjects : projectsConfig;
+  const totalProjects = projects.length;
 
   const scrollToSlide = useCallback(
     (index: number, smooth = true) => {
@@ -106,7 +112,7 @@ export function ProjectsShowcase() {
             "max-md:-mt-10 max-md:flex max-md:gap-0 max-md:overflow-x-auto max-md:snap-x max-md:snap-mandatory max-md:scroll-smooth max-md:py-[50px]"
           )}
         >
-          {projectsConfig.map((project) => (
+          {projects.map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}
         </div>
@@ -140,7 +146,7 @@ export function ProjectsShowcase() {
           </button>
 
           <div id="project-dots" className="flex items-center gap-2 px-1">
-            {projectsConfig.map((p, idx) => (
+            {projects.map((p, idx) => (
               <button
                 key={p.id}
                 type="button"
