@@ -8,38 +8,10 @@
  *   npm run redis:flush          (Xóa toàn bộ cache trên Redis để làm mới)
  */
 
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
 import { Redis } from "@upstash/redis";
+import { loadProjectEnv } from "./lib/shared.mjs";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, "..");
-
-function loadEnv() {
-  for (const envFile of [".env.local", ".env"]) {
-    const fullPath = path.join(rootDir, envFile);
-    if (fs.existsSync(fullPath)) {
-      const content = fs.readFileSync(fullPath, "utf-8");
-      content.split("\n").forEach((line) => {
-        const trimmed = line.trim();
-        if (trimmed && !trimmed.startsWith("#")) {
-          const eqIdx = trimmed.indexOf("=");
-          if (eqIdx !== -1) {
-            const key = trimmed.slice(0, eqIdx).trim();
-            const val = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, "");
-            if (!process.env[key]) {
-              process.env[key] = val;
-            }
-          }
-        }
-      });
-    }
-  }
-}
-
-loadEnv();
+loadProjectEnv();
 
 const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
 const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
@@ -50,7 +22,9 @@ console.log("   REDIS DOCKER & CACHE DIAGNOSTICS - TOMATODEVS");
 console.log("========================================================\n");
 
 if (!url || !token || url.includes("your-redis-instance")) {
-  console.error("❌ Chưa cấu hình UPSTASH_REDIS_REST_URL hoặc UPSTASH_REDIS_REST_TOKEN trong .env!");
+  console.error(
+    "❌ Chưa cấu hình UPSTASH_REDIS_REST_URL hoặc UPSTASH_REDIS_REST_TOKEN trong .env!"
+  );
   process.exit(1);
 }
 
@@ -66,7 +40,9 @@ async function main() {
 
     const isLocal = url.includes("127.0.0.1") || url.includes("localhost");
     console.log(`✅ Kết nối Redis : THÀNH CÔNG (${pong})`);
-    console.log(`🌐 Chế độ        : ${isLocal ? "Docker Local (Serverless HTTP Proxy)" : "Upstash Cloud"}`);
+    console.log(
+      `🌐 Chế độ        : ${isLocal ? "Docker Local (Serverless HTTP Proxy)" : "Upstash Cloud"}`
+    );
     console.log(`🔗 Endpoint      : ${url}`);
     console.log(`⚡ Độ trễ (Ping) : ${latency} ms\n`);
 
@@ -75,9 +51,12 @@ async function main() {
         "tomato:tiktok:stats",
         "latest_follower",
         "tomato:tiktok:refresh_lock",
-        "tomato:r2:music_playlist"
+        "tomato:r2:music_playlist",
+        "tomato:r2:music_refresh_lock"
       );
-      console.log("🧹 Đã xóa sạch toàn bộ khóa Cache (TikTok & Music Playlist) trên Redis!\n");
+      console.log(
+        "🧹 Đã xóa sạch toàn bộ khóa Cache (TikTok & Music Playlist) trên Redis!\n"
+      );
       return;
     }
 
@@ -88,10 +67,14 @@ async function main() {
     if (tiktokStats) {
       console.log(`   - Followers : ${tiktokStats.followers}`);
       console.log(`   - Likes     : ${tiktokStats.likes}`);
-      console.log(`   - Cập nhật  : ${new Date(tiktokStats.fetchedAt).toLocaleString("vi-VN")}`);
+      console.log(
+        `   - Cập nhật  : ${new Date(tiktokStats.fetchedAt).toLocaleString("vi-VN")}`
+      );
       console.log(`   - TTL còn   : ${tiktokTtl} giây`);
     } else {
-      console.log("   - Trạng thái: Chưa có cache (Sẽ tự động lưu ở lần gọi API đầu tiên)");
+      console.log(
+        "   - Trạng thái: Chưa có cache (Sẽ tự động lưu ở lần gọi API đầu tiên)"
+      );
     }
 
     console.log("");
@@ -107,13 +90,17 @@ async function main() {
         console.log(`     ${idx + 1}. ${t.artist} - ${t.name}`);
       });
     } else {
-      console.log("   - Trạng thái: Chưa có cache (Sẽ tự động lưu khi gọi /api/music)");
+      console.log(
+        "   - Trạng thái: Chưa có cache (Sẽ tự động lưu khi gọi /api/music)"
+      );
     }
 
     console.log("\n========================================================\n");
   } catch (err) {
     console.error("❌ Lỗi kết nối tới Redis:", err.message);
-    console.error("💡 Gợi ý: Hãy chắc chắn Docker đang chạy bằng lệnh: npm run redis:up\n");
+    console.error(
+      "💡 Gợi ý: Hãy chắc chắn Docker đang chạy bằng lệnh: npm run redis:up\n"
+    );
     process.exit(1);
   }
 }
