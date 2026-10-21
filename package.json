@@ -10,6 +10,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "r2:upload": "node scripts/upload-music-to-r2.mjs",
+    "spotify:sync": "node scripts/sync-spotify-playlist.mjs",
+    "breakcore:sync": "node scripts/sync-breakcore-mix.mjs",
     "redis:up": "docker compose up -d",
     "redis:down": "docker compose down",
     "redis:status": "node scripts/redis-status.mjs",

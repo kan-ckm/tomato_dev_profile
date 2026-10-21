@@ -41,6 +41,7 @@ export interface MusicTrack {
   file: string;
   url?: string;
   size?: number;
+  cover?: string;
 }
 
 export interface TikTokStatsResponse {
