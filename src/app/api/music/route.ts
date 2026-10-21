@@ -73,13 +73,31 @@ export async function GET(request: NextRequest) {
             name = parts.slice(1).join(" x ").trim();
           }
 
+          const baseFilename = filename.replace(/\.mp3$/i, "");
+
           return {
             name,
             artist,
             file: filename,
             url: getR2PublicUrl(key),
             size: obj.Size,
+            cover: getR2PublicUrl(`music/covers/${baseFilename}.jpg`),
           };
+        });
+
+        // Sắp xếp danh sách bài hát theo thứ tự mix chuẩn:
+        // Đảm bảo "through the light" luôn đứng ở vị trí đầu tiên (index 0)
+        const fallbackOrder = new Map(
+          fallbackPlaylist.map((t, idx) => [t.file.toLowerCase(), idx])
+        );
+        r2Tracks.sort((a, b) => {
+          const aIdx = fallbackOrder.has(a.file.toLowerCase())
+            ? fallbackOrder.get(a.file.toLowerCase())!
+            : 999;
+          const bIdx = fallbackOrder.has(b.file.toLowerCase())
+            ? fallbackOrder.get(b.file.toLowerCase())!
+            : 999;
+          return aIdx - bIdx;
         });
 
         // Lưu danh sách nhạc R2 vào Redis Cache (10 phút)
@@ -122,6 +140,10 @@ export async function GET(request: NextRequest) {
       .readdirSync(musicDir)
       .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
 
+    const fallbackOrder = new Map(
+      fallbackPlaylist.map((t, idx) => [t.file.toLowerCase(), idx])
+    );
+
     const musicFiles: MusicTrack[] = files
       .filter(isSafeMp3Filename)
       .map((file) => {
@@ -138,11 +160,27 @@ export async function GET(request: NextRequest) {
           name = parts.slice(1).join(" x ").trim();
         }
 
+        const baseFilename = file.replace(/\.mp3$/i, "");
+        const localCoverPath = path.join(publicMusicDir, "covers", `${baseFilename}.jpg`);
+        const cover = fs.existsSync(localCoverPath)
+          ? `/assets/music/covers/${encodeURIComponent(baseFilename)}.jpg`
+          : undefined;
+
         return {
           name,
           artist,
           file,
+          cover,
         };
+      })
+      .sort((a, b) => {
+        const aIdx = fallbackOrder.has(a.file.toLowerCase())
+          ? fallbackOrder.get(a.file.toLowerCase())!
+          : 999;
+        const bIdx = fallbackOrder.has(b.file.toLowerCase())
+          ? fallbackOrder.get(b.file.toLowerCase())!
+          : 999;
+        return aIdx - bIdx;
       });
 
     const resultTracks = musicFiles.length > 0 ? musicFiles : fallbackPlaylist;
