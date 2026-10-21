@@ -6,7 +6,7 @@ export const profileConfig: ProfileConfig = {
   greeting: "Hello。",
   roleBold: "Member of Redre",
   roleSuffix: " — Redre dev.",
-  collabText: "DM for collabs: discord",
+  collabText: "Contact for collabs: discord",
   discordHandle: "@nxcjcd",
   discordUrl: "https://discord.com/users/907653276701433896",
   avatarSrc: "/assets/avatar/avatar.jpg",

@@ -15,6 +15,23 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
 
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.r2.dev",
+      },
+      {
+        protocol: "https",
+        hostname: "**.cloudflarestorage.com",
+      },
+      {
+        protocol: "https",
+        hostname: "images.pexels.com",
+      },
+    ],
+  },
+
   // Ensure music files in public/assets/music are bundled/accessible for serverless API routes on Vercel
   outputFileTracingIncludes: {
     "/api/music": ["./public/assets/music/**/*"],
@@ -99,7 +116,7 @@ const nextConfig = {
               "font-src 'self' https://fonts.gstatic.com data:",
               "img-src 'self' data: blob: https:",
               `media-src 'self' data: blob: https://*.r2.dev https://*.cloudflarestorage.com ${r2PublicOrigin} https:`.trim(),
-              `connect-src 'self' https://*.upstash.io https://*.r2.dev https://*.cloudflarestorage.com ${r2PublicOrigin}`.trim(),
+              `connect-src 'self' http://localhost:3000 http://localhost:3001 https://tomatodev.me https://*.upstash.io https://*.r2.dev https://*.cloudflarestorage.com ${r2PublicOrigin}`.trim(),
               "frame-ancestors 'self'",
               "base-uri 'self'",
               "form-action 'self'",
