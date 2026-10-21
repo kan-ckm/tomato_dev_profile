@@ -1,4 +1,5 @@
 import { Redis } from "@upstash/redis";
+import { env } from "./env";
 import type { MusicTrack } from "../types";
 
 export interface CachedTikTokData {
@@ -11,7 +12,6 @@ export interface RedisHealthStatus {
   connected: boolean;
   mode: "docker-local" | "upstash-cloud" | "memory-fallback";
   latencyMs: number | null;
-  url: string | null;
   error?: string;
 }
 
@@ -21,12 +21,14 @@ export const REDIS_KEYS = {
   TIKTOK_LEGACY: "latest_follower",
   TIKTOK_LOCK: "tomato:tiktok:refresh_lock",
   MUSIC_PLAYLIST: "tomato:r2:music_playlist",
+  MUSIC_LOCK: "tomato:r2:music_refresh_lock",
 } as const;
 
 const TIKTOK_TTL_SECONDS = 24 * 60 * 60; // 24 giờ lưu trữ bền vững
 const TIKTOK_FRESH_MS = 30 * 60 * 1000;  // 30 phút coi là dữ liệu mới (Fresh)
 const MUSIC_TTL_SECONDS = 10 * 60;       // 10 phút cache danh sách nhạc R2
 const L1_MEMORY_TTL_MS = 60 * 1000;      // 60 giây cache siêu tốc trên RAM (L1)
+const MAX_L1_CACHE_KEYS = 50;            // Giới hạn số khóa trong L1 RAM Cache
 
 interface L1CacheEntry<T> {
   value: T;
@@ -38,25 +40,10 @@ const l1Cache = new Map<string, L1CacheEntry<unknown>>();
 let memoryTikTokFallback: CachedTikTokData | null = null;
 let memoryMusicFallback: MusicTrack[] | null = null;
 
-let redisInstance: Redis | null = null;
+// Khóa chống trùng lặp trong bộ nhớ nếu Redis không bật
+const memoryLocks = new Map<string, number>();
 
-/**
- * Kiểm tra xem URL cấu hình có phải là placeholder mẫu hay không
- */
-function isValidRedisConfig(url?: string, token?: string): boolean {
-  if (!url || !token) return false;
-  const cleanUrl = url.trim();
-  const cleanToken = token.trim();
-  if (
-    !cleanUrl ||
-    !cleanToken ||
-    cleanUrl.includes("your-redis-instance") ||
-    cleanToken === "your-upstash-redis-rest-token"
-  ) {
-    return false;
-  }
-  return true;
-}
+let redisInstance: Redis | null = null;
 
 /**
  * Khởi tạo kết nối Redis an toàn (Hỗ trợ cả Docker Redis cục bộ qua cổng 8079 và Upstash Cloud).
@@ -64,17 +51,14 @@ function isValidRedisConfig(url?: string, token?: string): boolean {
 export function getRedisClient(): Redis | null {
   if (redisInstance) return redisInstance;
 
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
-
-  if (!isValidRedisConfig(url, token)) {
+  if (!env.redis.isConfigured) {
     return null;
   }
 
   try {
     redisInstance = new Redis({
-      url: url!.trim(),
-      token: token!.trim(),
+      url: env.redis.url,
+      token: env.redis.token,
       retry: {
         retries: 1,
         backoff: () => 100,
@@ -101,13 +85,45 @@ function getL1<T>(key: string): T | null {
 }
 
 /**
- * Ghi vào L1 Memory Cache
+ * Ghi vào L1 Memory Cache (Có giới hạn số lượng key tránh rò rỉ bộ nhớ)
  */
 function setL1<T>(key: string, value: T, ttlMs = L1_MEMORY_TTL_MS): void {
+  if (l1Cache.size >= MAX_L1_CACHE_KEYS && !l1Cache.has(key)) {
+    const oldestKey = l1Cache.keys().next().value;
+    if (oldestKey !== undefined) l1Cache.delete(oldestKey);
+  }
   l1Cache.set(key, {
     value,
     expiresAt: Date.now() + ttlMs,
   });
+}
+
+/**
+ * Khóa phân tán (Distributed Lock) dùng chung cho các tác vụ làm mới cache
+ */
+export async function acquireDistributedLock(
+  lockKey: string,
+  ttlSeconds = 15
+): Promise<boolean> {
+  const now = Date.now();
+  const memExpiry = memoryLocks.get(lockKey);
+  if (memExpiry && now < memExpiry) {
+    return false;
+  }
+  memoryLocks.set(lockKey, now + ttlSeconds * 1000);
+
+  const redis = getRedisClient();
+  if (!redis) return true;
+
+  try {
+    const result = await redis.set(lockKey, "locked", {
+      nx: true,
+      ex: ttlSeconds,
+    });
+    return result === "OK";
+  } catch {
+    return true;
+  }
 }
 
 // ============================================================================
@@ -197,18 +213,7 @@ export async function setCachedTikTokStats(
  * Chỉ cho phép 1 tiến trình cào dữ liệu TikTok tại một thời điểm (TTL khóa: 15 giây)
  */
 export async function acquireTikTokRefreshLock(): Promise<boolean> {
-  const redis = getRedisClient();
-  if (!redis) return true;
-
-  try {
-    const result = await redis.set(REDIS_KEYS.TIKTOK_LOCK, "locked", {
-      nx: true,
-      ex: 15,
-    });
-    return result === "OK";
-  } catch {
-    return true;
-  }
+  return acquireDistributedLock(REDIS_KEYS.TIKTOK_LOCK, 15);
 }
 
 // ============================================================================
@@ -283,9 +288,10 @@ export async function invalidateMusicPlaylistCache(): Promise<void> {
 
 /**
  * Kiểm tra trạng thái kết nối và độ trễ (latency) của Redis
+ * (Không trả về URL gốc để tránh lộ thông tin hạ tầng nội bộ trên API public)
  */
 export async function checkRedisHealth(): Promise<RedisHealthStatus> {
-  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || null;
+  const url = env.redis.url;
   const redis = getRedisClient();
 
   if (!redis || !url) {
@@ -293,7 +299,6 @@ export async function checkRedisHealth(): Promise<RedisHealthStatus> {
       connected: false,
       mode: "memory-fallback",
       latencyMs: null,
-      url: null,
     };
   }
 
@@ -308,14 +313,12 @@ export async function checkRedisHealth(): Promise<RedisHealthStatus> {
       connected: pong === "PONG",
       mode,
       latencyMs,
-      url,
     };
   } catch (err) {
     return {
       connected: false,
       mode: "memory-fallback",
       latencyMs: null,
-      url,
       error: err instanceof Error ? err.message : String(err),
     };
   }

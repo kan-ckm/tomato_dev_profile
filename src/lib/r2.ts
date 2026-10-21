@@ -6,6 +6,7 @@ import {
   GetObjectCommand,
   HeadObjectCommand,
 } from "@aws-sdk/client-s3";
+import { env } from "./env";
 
 /**
  * Cloudflare R2 Client & Helper Functions
@@ -18,40 +19,21 @@ let r2ClientInstance: S3Client | null = null;
  * Kiểm tra xem các biến môi trường cấu hình Cloudflare R2 đã đầy đủ chưa
  */
 export function isR2Configured(): boolean {
-  const accountId = process.env.R2_ACCOUNT_ID;
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-  const bucketName = process.env.R2_BUCKET_NAME;
-
-  return Boolean(
-    accountId &&
-    accessKeyId &&
-    secretAccessKey &&
-    bucketName &&
-    accountId.trim().length > 0 &&
-    accessKeyId.trim().length > 0 &&
-    secretAccessKey.trim().length > 0 &&
-    bucketName.trim().length > 0
-  );
+  return env.r2.isConfigured;
 }
 
 /**
  * Lấy tên Bucket từ biến môi trường
  */
 export function getR2BucketName(): string {
-  return process.env.R2_BUCKET_NAME || "";
+  return env.r2.bucketName;
 }
 
 /**
  * Chuẩn hóa Account ID (tự động loại bỏ https:// hoặc .r2.cloudflarestorage.com nếu người dùng vô tình dán cả URL)
  */
 export function getCleanR2AccountId(): string {
-  const raw = process.env.R2_ACCOUNT_ID?.trim() || "";
-  return raw
-    .replace(/^https?:\/\//i, "")
-    .replace(/\.r2\.cloudflarestorage\.com.*$/i, "")
-    .replace(/\/+$/, "")
-    .trim();
+  return env.r2.accountId;
 }
 
 /**
@@ -62,9 +44,7 @@ export function getR2Client(): S3Client {
     return r2ClientInstance;
   }
 
-  const accountId = getCleanR2AccountId();
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID?.trim();
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY?.trim();
+  const { accountId, accessKeyId, secretAccessKey } = env.r2;
 
   if (!accountId || !accessKeyId || !secretAccessKey) {
     throw new Error(
@@ -75,6 +55,7 @@ export function getR2Client(): S3Client {
   r2ClientInstance = new S3Client({
     region: "auto",
     endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    maxAttempts: 2,
     credentials: {
       accessKeyId,
       secretAccessKey,
@@ -89,7 +70,7 @@ export function getR2Client(): S3Client {
  * Ưu tiên dùng R2_PUBLIC_URL (custom domain hoặc *.r2.dev đã bật Public Access).
  */
 export function getR2PublicUrl(key: string): string {
-  const publicBase = process.env.R2_PUBLIC_URL?.replace(/\/+$/, "");
+  const publicBase = env.r2.publicUrl;
   const cleanKey = key.replace(/^\/+/, "");
 
   if (publicBase) {
@@ -97,15 +78,15 @@ export function getR2PublicUrl(key: string): string {
   }
 
   // Fallback về endpoint chuẩn nếu chưa gắn public domain
-  const accountId = process.env.R2_ACCOUNT_ID;
-  const bucket = getR2BucketName();
+  const accountId = env.r2.accountId;
+  const bucket = env.r2.bucketName;
   return `https://${accountId}.r2.cloudflarestorage.com/${bucket}/${encodeURI(cleanKey)}`;
 }
 
 /**
- * Liệt kê các đối tượng trong bucket Cloudflare R2
+ * Liệt kê các đối tượng trong bucket Cloudflare R2 (có giới hạn timeout 6 giây chống treo request)
  */
-export async function listR2Objects(prefix = "") {
+export async function listR2Objects(prefix = "", timeoutMs = 6000) {
   if (!isR2Configured()) {
     return [];
   }
@@ -118,7 +99,9 @@ export async function listR2Objects(prefix = "") {
     Prefix: prefix,
   });
 
-  const response = await client.send(command);
+  const response = await client.send(command, {
+    abortSignal: AbortSignal.timeout(timeoutMs),
+  });
   return response.Contents || [];
 }
 
@@ -178,7 +161,7 @@ export async function getR2Object(key: string) {
 /**
  * Kiểm tra xem một đối tượng có tồn tại trên R2 hay không
  */
-export async function headR2Object(key: string): Promise<boolean> {
+export async function headR2Object(key: string, timeoutMs = 5000): Promise<boolean> {
   try {
     const client = getR2Client();
     const bucket = getR2BucketName();
@@ -188,7 +171,9 @@ export async function headR2Object(key: string): Promise<boolean> {
       Key: key,
     });
 
-    await client.send(command);
+    await client.send(command, {
+      abortSignal: AbortSignal.timeout(timeoutMs),
+    });
     return true;
   } catch {
     return false;

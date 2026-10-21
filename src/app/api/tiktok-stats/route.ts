@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { profileConfig } from "@/config/profile.config";
+import { env } from "@/lib/env";
 import {
   getCachedTikTokStats,
   setCachedTikTokStats,
@@ -10,8 +11,8 @@ import { checkRateLimit, getCorsHeaders } from "@/lib/security";
 import { TikTokStatsResponse } from "@/types";
 
 function getTikTokUsername(): string {
-  if (process.env.TIKTOK_USERNAME) {
-    return process.env.TIKTOK_USERNAME.replace(/^@/, "").trim();
+  if (env.tiktokUsername) {
+    return env.tiktokUsername;
   }
   const urlMatch = profileConfig.tiktok.profileUrl?.match(/@([\w.-]+)/);
   if (urlMatch) return urlMatch[1];
@@ -71,7 +72,8 @@ async function scrapeTikTokProfile(): Promise<{
   if (scriptMatch) {
     try {
       const json = JSON.parse(scriptMatch[1]);
-      const userDetail = json["__DEFAULT_SCOPE__"]?.["webapp.user-detail"]?.userInfo;
+      const userDetail =
+        json["__DEFAULT_SCOPE__"]?.["webapp.user-detail"]?.userInfo;
       if (userDetail?.stats) {
         followersRaw = Number(userDetail.stats.followerCount ?? 0);
         likesRaw = Number(userDetail.stats.heartCount ?? 0);
@@ -79,9 +81,15 @@ async function scrapeTikTokProfile(): Promise<{
       if (!followersRaw) {
         for (const key of Object.keys(json)) {
           const obj = json[key];
-          if (obj && typeof obj === "object" && ("followerCount" in obj || "fans" in obj)) {
+          if (
+            obj &&
+            typeof obj === "object" &&
+            ("followerCount" in obj || "fans" in obj)
+          ) {
             followersRaw = Number(obj.followerCount ?? obj.fans ?? 0);
-            likesRaw = Number(obj.heartCount ?? obj.heart ?? obj.diggCount ?? 0);
+            likesRaw = Number(
+              obj.heartCount ?? obj.heart ?? obj.diggCount ?? 0
+            );
             break;
           }
         }
@@ -93,17 +101,23 @@ async function scrapeTikTokProfile(): Promise<{
 
   // Cách 2: Regex trực tiếp trên HTML
   if (!followersRaw) {
-    const fMatch = html.match(/"followerCount"\s*:\s*(\d+)/) || html.match(/"fans"\s*:\s*(\d+)/);
+    const fMatch =
+      html.match(/"followerCount"\s*:\s*(\d+)/) ||
+      html.match(/"fans"\s*:\s*(\d+)/);
     if (fMatch) followersRaw = parseInt(fMatch[1], 10);
   }
   if (!likesRaw) {
-    const lMatch = html.match(/"heartCount"\s*:\s*(\d+)/) || html.match(/"heart"\s*:\s*(\d+)/);
+    const lMatch =
+      html.match(/"heartCount"\s*:\s*(\d+)/) ||
+      html.match(/"heart"\s*:\s*(\d+)/);
     if (lMatch) likesRaw = parseInt(lMatch[1], 10);
   }
 
   // Cách 3: Trích xuất từ SIGI_STATE
   if (!followersRaw) {
-    const sigiMatch = html.match(/window\['SIGI_STATE'\]\s*=\s*({[\s\S]*?});\s*window/);
+    const sigiMatch = html.match(
+      /window\['SIGI_STATE'\]\s*=\s*({[\s\S]*?});\s*window/
+    );
     if (sigiMatch) {
       try {
         const sigi = JSON.parse(sigiMatch[1]);
@@ -151,7 +165,7 @@ export async function OPTIONS(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const corsHeaders = getCorsHeaders(request);
 
-  const rateLimit = checkRateLimit(request, 60, 60_000);
+  const rateLimit = checkRateLimit(request, 60, 60_000, "api-tiktok");
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: "Too many requests. Please try again later." },
@@ -159,7 +173,24 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const forceRefresh = request.nextUrl.searchParams.get("refresh") === "1";
+  let forceRefresh = request.nextUrl.searchParams.get("refresh") === "1";
+
+  // Bảo vệ tham số ?refresh=1 bằng Rate Limit khắt khe (tối đa 2 lần/phút/IP) + Distributed Lock
+  // để ngăn chặn tấn công làm cạn kiệt Redis Write Quota hoặc làm TikTok khóa IP máy chủ.
+  if (forceRefresh) {
+    const refreshLimit = checkRateLimit(
+      request,
+      2,
+      60_000,
+      "api-tiktok-refresh"
+    );
+    const hasLock = refreshLimit.allowed
+      ? await acquireTikTokRefreshLock()
+      : false;
+    if (!hasLock) {
+      forceRefresh = false;
+    }
+  }
 
   try {
     // 1. Ưu tiên đọc từ Redis Cache trước (Cache-First < 1ms)
@@ -183,14 +214,17 @@ export async function GET(request: NextRequest) {
           status: 200,
           headers: {
             ...corsHeaders,
-            "X-Cache": isTikTokCacheFresh(cachedFollower) ? "HIT-FRESH" : "HIT-STALE",
-            "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=86400",
+            "X-Cache": isTikTokCacheFresh(cachedFollower)
+              ? "HIT-FRESH"
+              : "HIT-STALE",
+            "Cache-Control":
+              "public, s-maxage=1800, stale-while-revalidate=86400",
           },
         }
       );
     }
 
-    // 2. Nếu chưa có cache (Cold Start) hoặc yêu cầu ?refresh=1, tiến hành lấy mới
+    // 2. Nếu chưa có cache (Cold Start) hoặc yêu cầu ?refresh=1 hợp lệ, tiến hành lấy mới
     let freshFollowers = 0;
     let freshLikes = 0;
     try {
@@ -198,7 +232,10 @@ export async function GET(request: NextRequest) {
       freshFollowers = result.followersRaw;
       freshLikes = result.likesRaw;
     } catch (scrapeErr) {
-      console.warn("[TikTok Stats] Live scrape failed, using cache/fallback:", scrapeErr);
+      console.warn(
+        "[TikTok Stats] Live scrape failed, using cache/fallback:",
+        scrapeErr
+      );
     }
 
     // 3. Nếu lấy được dữ liệu mới hợp lệ, lưu ngay vào Redis
@@ -206,16 +243,26 @@ export async function GET(request: NextRequest) {
       await setCachedTikTokStats(freshFollowers, freshLikes, true);
     } else if (!cachedFollower) {
       // Lưu tạm giá trị fallback vào Redis để tránh các request tiếp theo bị chậm nếu TikTok chặn IP
-      await setCachedTikTokStats(FALLBACK.followers_raw, FALLBACK.likes_raw, true);
+      await setCachedTikTokStats(
+        FALLBACK.followers_raw,
+        FALLBACK.likes_raw,
+        true
+      );
     }
 
     // 4. Tổng hợp kết quả trả về
     const data: TikTokStatsResponse = {
       followers_raw:
-        freshFollowers || (cachedFollower ? cachedFollower.followers : FALLBACK.followers_raw),
+        freshFollowers ||
+        (cachedFollower ? cachedFollower.followers : FALLBACK.followers_raw),
       likes_raw:
-        freshLikes || (cachedFollower ? cachedFollower.likes : FALLBACK.likes_raw),
-      source: freshFollowers ? "tiktok" : cachedFollower ? "cached" : "fallback",
+        freshLikes ||
+        (cachedFollower ? cachedFollower.likes : FALLBACK.likes_raw),
+      source: freshFollowers
+        ? "tiktok"
+        : cachedFollower
+        ? "cached"
+        : "fallback",
       updated_at: new Date().toISOString(),
     };
 

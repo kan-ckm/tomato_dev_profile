@@ -2,10 +2,27 @@ import fs from "fs";
 import path from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { fallbackPlaylist } from "@/config/music.config";
-import { checkRateLimit, isSafeMp3Filename } from "@/lib/security";
+import {
+  checkRateLimit,
+  getCorsHeaders,
+  isSafeMp3Filename,
+} from "@/lib/security";
 import { isR2Configured, listR2Objects, getR2PublicUrl } from "@/lib/r2";
-import { getCachedMusicPlaylist, setCachedMusicPlaylist } from "@/lib/redis";
+import {
+  REDIS_KEYS,
+  acquireDistributedLock,
+  getCachedMusicPlaylist,
+  setCachedMusicPlaylist,
+} from "@/lib/redis";
+import { parseTrackFilename, sortTracksByConfigOrder } from "@/lib/music";
 import { MusicTrack } from "@/types";
+
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, {
+    status: 204,
+    headers: getCorsHeaders(request),
+  });
+}
 
 /**
  * GET /api/music
@@ -13,22 +30,35 @@ import { MusicTrack } from "@/types";
  * 1. Đọc từ Redis Cache (L1 RAM + L2 Docker/Upstash Redis) — Phản hồi < 1ms
  * 2. Hoặc lấy từ Cloudflare R2 Storage (và tự động lưu vào Redis Cache 10 phút)
  * 3. Hoặc quét thư mục `public/assets/music` cục bộ
- * 
- * Bảo mật:
+ *
+ * Bảo mật & Chống sập:
  * - Chống Path Traversal và lọc chặt định dạng .mp3
+ * - Bảo vệ tham số ?refresh=1 bằng Rate Limit riêng + Distributed Lock chống spam S3/R2
  * - Không bao giờ làm lộ đường dẫn hệ thống nội bộ (process.cwd()) khi có sự cố
- * - Rate Limiting & Cache-Control tối ưu
  */
 export async function GET(request: NextRequest) {
-  const rateLimit = checkRateLimit(request, 60, 60_000);
+  const corsHeaders = getCorsHeaders(request);
+
+  const rateLimit = checkRateLimit(request, 60, 60_000, "api-music");
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: "Too many requests. Please try again later." },
-      { status: 429 }
+      { status: 429, headers: corsHeaders }
     );
   }
 
-  const forceRefresh = request.nextUrl.searchParams.get("refresh") === "1";
+  let forceRefresh = request.nextUrl.searchParams.get("refresh") === "1";
+
+  // Bảo vệ nghiêm ngặt cờ ?refresh=1 để tránh kẻ xấu spam S3 ListObjectsV2 (Class A Operation)
+  if (forceRefresh) {
+    const refreshLimit = checkRateLimit(request, 2, 60_000, "api-music-refresh");
+    const hasLock = refreshLimit.allowed
+      ? await acquireDistributedLock(REDIS_KEYS.MUSIC_LOCK, 15)
+      : false;
+    if (!hasLock) {
+      forceRefresh = false;
+    }
+  }
 
   // 1. Kiểm tra Redis Cache trước tiên (giảm 99.9% số lần gọi S3 ListObjectsV2 lên Cloudflare R2)
   if (!forceRefresh) {
@@ -37,6 +67,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(cachedTracks, {
         status: 200,
         headers: {
+          ...corsHeaders,
           "X-Cache": "HIT",
           "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
         },
@@ -52,28 +83,17 @@ export async function GET(request: NextRequest) {
         r2Objects = await listR2Objects("");
       }
 
-      const mp3Objects = (r2Objects || []).filter(
-        (obj) => obj.Key && obj.Key.toLowerCase().endsWith(".mp3")
-      );
+      const mp3Objects = (r2Objects || []).filter((obj) => {
+        if (!obj.Key) return false;
+        const filename = obj.Key.split("/").pop() || "";
+        return isSafeMp3Filename(filename);
+      });
 
       if (mp3Objects.length > 0) {
-        const r2Tracks: MusicTrack[] = mp3Objects.map((obj) => {
+        const rawTracks: MusicTrack[] = mp3Objects.map((obj) => {
           const key = obj.Key!;
           const filename = key.split("/").pop() || key;
-          let name = filename.replace(/\.mp3$/i, "");
-          let artist = "Unknown";
-
-          if (name.includes(" - ")) {
-            const parts = name.split(" - ");
-            artist = parts[0].trim();
-            name = parts.slice(1).join(" - ").trim();
-          } else if (name.includes(" x ")) {
-            const parts = name.split(" x ");
-            artist = parts[0].trim();
-            name = parts.slice(1).join(" x ").trim();
-          }
-
-          const baseFilename = filename.replace(/\.mp3$/i, "");
+          const { name, artist, baseFilename } = parseTrackFilename(filename);
 
           return {
             name,
@@ -85,34 +105,25 @@ export async function GET(request: NextRequest) {
           };
         });
 
-        // Sắp xếp danh sách bài hát theo thứ tự mix chuẩn:
-        // Đảm bảo "through the light" luôn đứng ở vị trí đầu tiên (index 0)
-        const fallbackOrder = new Map(
-          fallbackPlaylist.map((t, idx) => [t.file.toLowerCase(), idx])
-        );
-        r2Tracks.sort((a, b) => {
-          const aIdx = fallbackOrder.has(a.file.toLowerCase())
-            ? fallbackOrder.get(a.file.toLowerCase())!
-            : 999;
-          const bIdx = fallbackOrder.has(b.file.toLowerCase())
-            ? fallbackOrder.get(b.file.toLowerCase())!
-            : 999;
-          return aIdx - bIdx;
-        });
+        const sortedR2Tracks = sortTracksByConfigOrder(rawTracks);
 
         // Lưu danh sách nhạc R2 vào Redis Cache (10 phút)
-        await setCachedMusicPlaylist(r2Tracks);
+        await setCachedMusicPlaylist(sortedR2Tracks);
 
-        return NextResponse.json(r2Tracks, {
+        return NextResponse.json(sortedR2Tracks, {
           status: 200,
           headers: {
+            ...corsHeaders,
             "X-Cache": "MISS",
             "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
           },
         });
       }
     } catch (r2Error) {
-      console.warn("[API /api/music] Cloudflare R2 query failed, falling back to local files:", r2Error);
+      console.warn(
+        "[API /api/music] Cloudflare R2 query failed, falling back to local files:",
+        r2Error
+      );
     }
   }
 
@@ -131,37 +142,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(fallbackPlaylist, {
         status: 200,
         headers: {
+          ...corsHeaders,
           "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
         },
       });
     }
 
-    const files = fs
-      .readdirSync(musicDir)
-      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
-
-    const fallbackOrder = new Map(
-      fallbackPlaylist.map((t, idx) => [t.file.toLowerCase(), idx])
-    );
+    const files = fs.readdirSync(musicDir);
 
     const musicFiles: MusicTrack[] = files
       .filter(isSafeMp3Filename)
       .map((file) => {
-        let name = file.replace(/\.mp3$/i, "");
-        let artist = "Unknown";
-
-        if (name.includes(" - ")) {
-          const parts = name.split(" - ");
-          artist = parts[0].trim();
-          name = parts.slice(1).join(" - ").trim();
-        } else if (name.includes(" x ")) {
-          const parts = name.split(" x ");
-          artist = parts[0].trim();
-          name = parts.slice(1).join(" x ").trim();
-        }
-
-        const baseFilename = file.replace(/\.mp3$/i, "");
-        const localCoverPath = path.join(publicMusicDir, "covers", `${baseFilename}.jpg`);
+        const { name, artist, baseFilename } = parseTrackFilename(file);
+        const localCoverPath = path.join(
+          publicMusicDir,
+          "covers",
+          `${baseFilename}.jpg`
+        );
         const cover = fs.existsSync(localCoverPath)
           ? `/assets/music/covers/${encodeURIComponent(baseFilename)}.jpg`
           : undefined;
@@ -172,23 +169,19 @@ export async function GET(request: NextRequest) {
           file,
           cover,
         };
-      })
-      .sort((a, b) => {
-        const aIdx = fallbackOrder.has(a.file.toLowerCase())
-          ? fallbackOrder.get(a.file.toLowerCase())!
-          : 999;
-        const bIdx = fallbackOrder.has(b.file.toLowerCase())
-          ? fallbackOrder.get(b.file.toLowerCase())!
-          : 999;
-        return aIdx - bIdx;
       });
 
-    const resultTracks = musicFiles.length > 0 ? musicFiles : fallbackPlaylist;
-    await setCachedMusicPlaylist(resultTracks);
+    const sortedLocalTracks =
+      musicFiles.length > 0
+        ? sortTracksByConfigOrder(musicFiles)
+        : fallbackPlaylist;
 
-    return NextResponse.json(resultTracks, {
+    await setCachedMusicPlaylist(sortedLocalTracks);
+
+    return NextResponse.json(sortedLocalTracks, {
       status: 200,
       headers: {
+        ...corsHeaders,
         "X-Cache": "LOCAL",
         "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
       },
@@ -198,6 +191,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(fallbackPlaylist, {
       status: 200,
       headers: {
+        ...corsHeaders,
         "Cache-Control": "public, s-maxage=600",
       },
     });
