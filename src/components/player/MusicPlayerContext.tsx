@@ -117,7 +117,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       }
     };
 
-    fetch("/api/music")
+    fetch("/api/music", { cache: "no-cache" })
       .then((res) => res.json())
       .then((data) => {
         if (!isMounted) return;

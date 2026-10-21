@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
         headers: {
           ...corsHeaders,
           "X-Cache": "HIT",
-          "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+          "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
         },
       });
     }
@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
           headers: {
             ...corsHeaders,
             "X-Cache": "MISS",
-            "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+            "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
           },
         });
       }
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
         status: 200,
         headers: {
           ...corsHeaders,
-          "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+          "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
         },
       });
     }

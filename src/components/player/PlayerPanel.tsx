@@ -161,8 +161,15 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
           />
 
           <div className="min-w-0 flex-1">
-            <div className="mb-0.5 truncate font-display text-[0.95rem] font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]">
-              {currentTrack ? currentTrack.name : "Select a track"}
+            <div className="mb-0.5 flex items-center justify-between gap-2">
+              <span className="truncate font-display text-[0.95rem] font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]">
+                {currentTrack ? currentTrack.name : "Select a track"}
+              </span>
+              {playlist.length > 0 && (
+                <span className="shrink-0 rounded bg-white/10 px-1.5 py-0.5 font-numeric text-[0.68rem] font-semibold tracking-wider text-accent">
+                  {String(currentTrackIndex + 1).padStart(2, "0")}/{String(playlist.length).padStart(2, "0")}
+                </span>
+              )}
             </div>
             <div className="flex items-center justify-between text-[0.72rem]">
               <span className="truncate font-medium text-white/80">
@@ -302,10 +309,10 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
                 onUserInteraction?.();
                 setIsPlaylistExpanded((prev) => !prev);
               }}
-              className="flex cursor-pointer items-center justify-center border-none bg-transparent text-muted transition-all duration-200 hover:scale-110 hover:text-white"
+              className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-muted transition-all duration-200 hover:scale-105 hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
             >
               <svg
-                className="h-[18px] w-[18px]"
+                className="h-[15px] w-[15px]"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -320,6 +327,9 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
                 <line x1="3" y1="12" x2="3.01" y2="12" />
                 <line x1="3" y1="18" x2="3.01" y2="18" />
               </svg>
+              <span className="font-numeric text-[0.72rem] font-semibold text-white/80">
+                {playlist.length}
+              </span>
             </button>
           </div>
         </div>
@@ -344,12 +354,24 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
                     selectTrack(idx);
                   }}
                   className={cn(
-                    "group flex cursor-pointer items-center gap-3 rounded-xl border p-2 transition-all duration-200",
+                    "group flex cursor-pointer items-center gap-2.5 rounded-xl border p-2 transition-all duration-200",
                     active
                       ? "border-accent/30 bg-accent/15 text-accent shadow-[0_4px_15px_rgba(0,0,0,0.3)]"
                       : "border-transparent bg-white/[0.02] text-muted hover:border-white/10 hover:bg-white/[0.06] hover:text-white"
                   )}
                 >
+                  {/* Track Index Number */}
+                  <span
+                    className={cn(
+                      "w-4 shrink-0 text-center font-numeric text-[0.7rem] font-semibold transition-colors",
+                      active
+                        ? "text-accent font-bold"
+                        : "text-white/35 group-hover:text-white/70"
+                    )}
+                  >
+                    {String(idx + 1).padStart(2, "0")}
+                  </span>
+
                   {/* Rotating Vinyl Disc */}
                   <VinylDisc
                     cover={track.cover}

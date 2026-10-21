@@ -41,7 +41,7 @@ export function MobilePlaylistModal() {
         )}
       >
         <div className="flex items-center justify-between border-b border-white/[0.08] px-6 py-[18px]">
-          <div className="flex items-center gap-3 text-accent">
+          <div className="flex items-center gap-2.5 text-accent">
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -60,6 +60,9 @@ export function MobilePlaylistModal() {
               <line x1="3" y1="18" x2="3.01" y2="18" />
             </svg>
             <h3 className="font-display text-[1.1rem] font-bold text-white">Playlist</h3>
+            <span className="rounded-full bg-accent/15 px-2 py-0.5 font-numeric text-[0.7rem] font-semibold text-accent">
+              {playlist.length} bài
+            </span>
           </div>
           <button
             id="close-playlist-modal"
@@ -94,12 +97,24 @@ export function MobilePlaylistModal() {
                   setIsMobileModalOpen(false);
                 }}
                 className={cn(
-                  "group flex cursor-pointer items-center gap-3.5 rounded-2xl border p-2.5 transition-all duration-200",
+                  "group flex cursor-pointer items-center gap-3 rounded-2xl border p-2.5 transition-all duration-200",
                   active
                     ? "border-accent/30 bg-accent/[0.15] shadow-[0_4px_16px_rgba(0,0,0,0.3)]"
                     : "border-white/[0.04] bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.06]"
                 )}
               >
+                {/* Track Index */}
+                <span
+                  className={cn(
+                    "w-5 shrink-0 text-center font-numeric text-[0.72rem] font-semibold transition-colors",
+                    active
+                      ? "text-accent font-bold"
+                      : "text-white/30 group-hover:text-white/70"
+                  )}
+                >
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+
                 {/* Rotating Vinyl Disc */}
                 <VinylDisc
                   cover={track.cover}
