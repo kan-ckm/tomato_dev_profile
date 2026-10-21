@@ -20,6 +20,8 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
     duration,
     volume,
     isPlaylistExpanded,
+    isShuffle,
+    repeatMode,
     togglePlayPause,
     nextTrack,
     prevTrack,
@@ -27,12 +29,47 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
     seekToPercent,
     setVolume,
     toggleMute,
+    toggleShuffle,
+    toggleRepeatMode,
+    reorderPlaylist,
     setIsPlaylistExpanded,
   } = useMusicPlayer();
 
   const progressBarRef = useRef<HTMLDivElement>(null);
   const [isScrubbing, setIsScrubbing] = useState<boolean>(false);
   const [scrubPercent, setScrubPercent] = useState<number>(0);
+
+  // Trạng thái kéo thả (Drag and Drop) danh sách nhạc
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(index));
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex !== null && draggedIndex !== dropIndex) {
+      reorderPlaylist(draggedIndex, dropIndex);
+    }
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
 
   const progressPercent = isScrubbing
     ? scrubPercent
@@ -219,7 +256,8 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
 
         {/* Controls */}
         <div className="mt-[15px] flex items-center justify-between">
-          <div className="flex items-center gap-[15px]">
+          <div className="flex items-center gap-[11px]">
+            {/* Previous Track */}
             <button
               type="button"
               title="Previous"
@@ -234,6 +272,7 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
               </svg>
             </button>
 
+            {/* Play/Pause */}
             <button
               type="button"
               title="Play/Pause"
@@ -254,6 +293,7 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
               )}
             </button>
 
+            {/* Next Track */}
             <button
               type="button"
               title="Next"
@@ -268,7 +308,86 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
               </svg>
             </button>
 
-            <div className="flex items-center gap-2">
+            {/* Shuffle Button (Phát ngẫu nhiên) */}
+            <button
+              type="button"
+              title={
+                isShuffle
+                  ? "Tắt phát ngẫu nhiên (Shuffle: Đang bật)"
+                  : "Bật phát ngẫu nhiên (Shuffle: Đang tắt)"
+              }
+              onClick={() => {
+                onUserInteraction?.();
+                toggleShuffle();
+              }}
+              className={cn(
+                "flex cursor-pointer items-center justify-center border-none bg-transparent transition-all duration-200 hover:scale-110",
+                isShuffle
+                  ? "text-accent drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]"
+                  : "text-muted hover:text-white"
+              )}
+            >
+              <svg
+                className="h-[16px] w-[16px]"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="16 3 21 3 21 8" />
+                <line x1="4" y1="20" x2="21" y2="3" />
+                <polyline points="21 16 21 21 16 21" />
+                <line x1="15" y1="15" x2="21" y2="21" />
+                <line x1="4" y1="4" x2="9" y2="9" />
+              </svg>
+            </button>
+
+            {/* Repeat Button (Lặp lại: Off / All / One) */}
+            <button
+              type="button"
+              title={
+                repeatMode === "one"
+                  ? "Đang lặp lại 1 bài (Click để tắt)"
+                  : repeatMode === "all"
+                  ? "Đang lặp lại toàn bộ (Click để lặp 1 bài)"
+                  : "Không lặp lại (Click để lặp lại toàn bộ)"
+              }
+              onClick={() => {
+                onUserInteraction?.();
+                toggleRepeatMode();
+              }}
+              className={cn(
+                "relative flex cursor-pointer items-center justify-center border-none bg-transparent transition-all duration-200 hover:scale-110",
+                repeatMode !== "off"
+                  ? "text-accent drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]"
+                  : "text-muted hover:text-white"
+              )}
+            >
+              <svg
+                className="h-[16px] w-[16px]"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="17 1 21 5 17 9" />
+                <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                <polyline points="7 23 3 19 7 15" />
+                <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+              </svg>
+              {repeatMode === "one" && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-3 w-3 items-center justify-center rounded-full bg-accent font-numeric text-[8px] font-black text-black">
+                  1
+                </span>
+              )}
+            </button>
+
+            {/* Volume Control */}
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 title="Mute/Unmute"
@@ -285,7 +404,7 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
               <input
                 type="range"
                 aria-label="Volume"
-                className="volume-slider"
+                className="volume-slider w-14 sm:w-16"
                 min="0"
                 max="1"
                 step="0.01"
@@ -301,15 +420,21 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
             </div>
           </div>
 
+          {/* Playlist Toggle with 70-Track Counter Badge */}
           <div className="flex items-center">
             <button
               type="button"
-              title="Playlist"
+              title={`Danh sách phát (${playlist.length}/70 bài)`}
               onClick={() => {
                 onUserInteraction?.();
                 setIsPlaylistExpanded((prev) => !prev);
               }}
-              className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1 text-muted transition-all duration-200 hover:scale-105 hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+              className={cn(
+                "flex cursor-pointer items-center gap-1.5 rounded-lg border px-2 py-1 transition-all duration-200 hover:scale-105",
+                isPlaylistExpanded
+                  ? "border-accent/40 bg-accent/15 text-accent shadow-[0_0_12px_rgba(255,255,255,0.15)]"
+                  : "border-white/10 bg-white/[0.04] text-muted hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
+              )}
             >
               <svg
                 className="h-[15px] w-[15px]"
@@ -327,39 +452,67 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
                 <line x1="3" y1="12" x2="3.01" y2="12" />
                 <line x1="3" y1="18" x2="3.01" y2="18" />
               </svg>
-              <span className="font-numeric text-[0.72rem] font-semibold text-white/80">
-                {playlist.length}
+              <span className="font-numeric text-[0.72rem] font-semibold text-white/90">
+                {playlist.length}<span className="text-white/40">/70</span>
               </span>
             </button>
           </div>
         </div>
 
-        {/* Expandable Playlist with Rotating Vinyl Discs */}
+        {/* Expandable Playlist with Drag & Drop Reordering */}
         <div
           className={cn(
             "overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]",
             isPlaylistExpanded
-              ? "pointer-events-auto mt-5 max-h-[320px] opacity-100"
+              ? "pointer-events-auto mt-5 max-h-[340px] opacity-100"
               : "pointer-events-none mt-0 max-h-0 opacity-0"
           )}
         >
-          <div className="custom-scrollbar max-h-[250px] space-y-1.5 overflow-y-auto pr-1">
+          <div className="custom-scrollbar max-h-[270px] space-y-1.5 overflow-y-auto pr-1">
             {playlist.map((track, idx) => {
               const active = idx === currentTrackIndex;
+              const isBeingDragged = draggedIndex === idx;
+              const isDropTarget = dragOverIndex === idx && draggedIndex !== idx;
+
               return (
                 <div
                   key={track.file}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, idx)}
+                  onDragOver={(e) => handleDragOver(e, idx)}
+                  onDrop={(e) => handleDrop(e, idx)}
+                  onDragEnd={handleDragEnd}
                   onClick={() => {
                     onUserInteraction?.();
                     selectTrack(idx);
                   }}
                   className={cn(
-                    "group flex cursor-pointer items-center gap-2.5 rounded-xl border p-2 transition-all duration-200",
-                    active
-                      ? "border-accent/30 bg-accent/15 text-accent shadow-[0_4px_15px_rgba(0,0,0,0.3)]"
-                      : "border-transparent bg-white/[0.02] text-muted hover:border-white/10 hover:bg-white/[0.06] hover:text-white"
+                    "group flex cursor-pointer items-center gap-2 rounded-xl border p-2 transition-all duration-200 select-none",
+                    isBeingDragged && "opacity-40 scale-[0.98] border-dashed border-accent bg-accent/10",
+                    isDropTarget && "border-accent bg-accent/25 scale-[1.01] shadow-[0_0_15px_rgba(255,255,255,0.2)]",
+                    !isBeingDragged &&
+                      !isDropTarget &&
+                      (active
+                        ? "border-accent/30 bg-accent/15 text-accent shadow-[0_4px_15px_rgba(0,0,0,0.3)]"
+                        : "border-transparent bg-white/[0.02] text-muted hover:border-white/10 hover:bg-white/[0.06] hover:text-white")
                   )}
                 >
+                  {/* Grip Handle for Drag & Drop */}
+                  <span
+                    title="Kéo thả để sắp xếp thứ tự"
+                    className="shrink-0 cursor-grab text-white/25 transition-colors hover:text-accent active:cursor-grabbing"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                      <circle cx="8" cy="6" r="2" />
+                      <circle cx="16" cy="6" r="2" />
+                      <circle cx="8" cy="12" r="2" />
+                      <circle cx="16" cy="12" r="2" />
+                      <circle cx="8" cy="18" r="2" />
+                      <circle cx="16" cy="18" r="2" />
+                    </svg>
+                  </span>
+
                   {/* Track Index Number */}
                   <span
                     className={cn(
@@ -393,6 +546,51 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
                     <div className="truncate text-[0.68rem] text-muted">
                       {track.artist}
                     </div>
+                  </div>
+
+                  {/* Mini Move Up / Down Buttons */}
+                  <div
+                    className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      title="Chuyển lên trên"
+                      disabled={idx === 0}
+                      onClick={() => reorderPlaylist(idx, idx - 1)}
+                      className="cursor-pointer rounded p-1 text-white/40 transition-all hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
+                    >
+                      <svg
+                        className="h-3 w-3"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="18 15 12 9 6 15" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      title="Chuyển xuống dưới"
+                      disabled={idx === playlist.length - 1}
+                      onClick={() => reorderPlaylist(idx, idx + 1)}
+                      className="cursor-pointer rounded p-1 text-white/40 transition-all hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-20"
+                    >
+                      <svg
+                        className="h-3 w-3"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </button>
                   </div>
 
                   {/* Active Equalizer Sound Wave Indicator */}

@@ -16,6 +16,8 @@ import {
 import { safeStorageGet, safeStorageSet } from "@/lib/utils";
 import { MusicTrack } from "@/types";
 
+export type RepeatMode = "off" | "all" | "one";
+
 interface MusicPlayerContextValue {
   playlist: MusicTrack[];
   currentTrackIndex: number;
@@ -27,6 +29,8 @@ interface MusicPlayerContextValue {
   isPlaylistExpanded: boolean;
   isFloatingExpanded: boolean;
   isMobileModalOpen: boolean;
+  isShuffle: boolean;
+  repeatMode: RepeatMode;
   togglePlayPause: () => void;
   nextTrack: () => void;
   prevTrack: () => void;
@@ -34,6 +38,9 @@ interface MusicPlayerContextValue {
   seekToPercent: (percent: number) => void;
   setVolume: (val: number) => void;
   toggleMute: () => void;
+  toggleShuffle: () => void;
+  toggleRepeatMode: () => void;
+  reorderPlaylist: (startIndex: number, endIndex: number) => void;
   setIsPlaylistExpanded: React.Dispatch<React.SetStateAction<boolean>>;
   setIsFloatingExpanded: React.Dispatch<React.SetStateAction<boolean>>;
   setIsMobileModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -59,6 +66,32 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
   const [isPlaylistExpanded, setIsPlaylistExpanded] = useState<boolean>(false);
   const [isFloatingExpanded, setIsFloatingExpanded] = useState<boolean>(false);
   const [isMobileModalOpen, setIsMobileModalOpen] = useState<boolean>(false);
+
+  // Chế độ phát ngẫu nhiên (Shuffle) và Lặp lại (Repeat: off | all | one)
+  const [isShuffle, setIsShuffle] = useState<boolean>(() => {
+    return safeStorageGet("music_shuffle") === "true";
+  });
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>(() => {
+    const saved = safeStorageGet("music_repeat_mode") as RepeatMode | null;
+    return saved === "off" || saved === "one" || saved === "all" ? saved : "all";
+  });
+
+  const toggleShuffle = useCallback(() => {
+    setIsShuffle((prev) => {
+      const next = !prev;
+      safeStorageSet("music_shuffle", String(next));
+      return next;
+    });
+  }, []);
+
+  const toggleRepeatMode = useCallback(() => {
+    setRepeatMode((prev) => {
+      const next: RepeatMode =
+        prev === "off" ? "all" : prev === "all" ? "one" : "off";
+      safeStorageSet("music_repeat_mode", next);
+      return next;
+    });
+  }, []);
 
   // Đồng bộ class lên document.body để hiệu ứng zoom cover sidebar hoạt động
   useEffect(() => {
@@ -117,18 +150,56 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       }
     };
 
+    const applyCustomOrder = (tracks: MusicTrack[]): MusicTrack[] => {
+      try {
+        const rawOrder = safeStorageGet("music_custom_order");
+        if (!rawOrder) return tracks;
+        const orderArray: string[] = JSON.parse(rawOrder);
+        if (!Array.isArray(orderArray) || orderArray.length === 0) return tracks;
+
+        const trackMap = new Map<string, MusicTrack>();
+        tracks.forEach((t) => trackMap.set(t.file.toLowerCase(), t));
+
+        const ordered: MusicTrack[] = [];
+        const added = new Set<string>();
+
+        for (const file of orderArray) {
+          const lower = file.toLowerCase();
+          const track = trackMap.get(lower);
+          if (track && !added.has(lower)) {
+            ordered.push(track);
+            added.add(lower);
+          }
+        }
+
+        // Bổ sung các bài mới chưa có trong danh sách order đã lưu
+        for (const track of tracks) {
+          if (!added.has(track.file.toLowerCase())) {
+            ordered.push(track);
+          }
+        }
+
+        return ordered;
+      } catch {
+        return tracks;
+      }
+    };
+
     fetch("/api/music", { cache: "no-cache" })
       .then((res) => res.json())
       .then((data) => {
         if (!isMounted) return;
-        const tracks =
+        const rawTracks =
           data && Array.isArray(data) && data.length > 0 ? data : fallbackPlaylist;
-        setPlaylist(tracks);
-        initTrackFromStorage(tracks);
+        const orderedTracks = applyCustomOrder(rawTracks);
+        setPlaylist(orderedTracks);
+        initTrackFromStorage(orderedTracks);
       })
       .catch(() => {
         if (!isMounted) return;
-        initTrackFromStorage(fallbackPlaylist);
+        const orderedFallback = applyCustomOrder(fallbackPlaylist);
+        setPlaylist(orderedFallback);
+        initTrackFromStorage(orderedFallback);
       });
 
     return () => {
@@ -239,23 +310,90 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
     }
   }, [currentTrackIndex, loadAndPlayTrack]);
 
+  const getRandomIndex = useCallback((excludeIdx: number, length: number): number => {
+    if (length <= 1) return 0;
+    let rand = Math.floor(Math.random() * length);
+    let attempts = 0;
+    while (rand === excludeIdx && attempts < 10) {
+      rand = Math.floor(Math.random() * length);
+      attempts++;
+    }
+    return rand;
+  }, []);
+
   const nextTrack = useCallback(() => {
     if (playlist.length === 0) return;
-    const nextIdx = (currentTrackIndex + 1) % playlist.length;
-    loadAndPlayTrack(nextIdx, true);
-  }, [currentTrackIndex, playlist.length, loadAndPlayTrack]);
+    if (isShuffle && playlist.length > 1) {
+      const nextIdx = getRandomIndex(currentTrackIndex, playlist.length);
+      loadAndPlayTrack(nextIdx, true);
+    } else {
+      const nextIdx = (currentTrackIndex + 1) % playlist.length;
+      loadAndPlayTrack(nextIdx, true);
+    }
+  }, [currentTrackIndex, playlist.length, isShuffle, getRandomIndex, loadAndPlayTrack]);
 
   const prevTrack = useCallback(() => {
     if (playlist.length === 0) return;
-    const prevIdx = (currentTrackIndex - 1 + playlist.length) % playlist.length;
-    loadAndPlayTrack(prevIdx, true);
-  }, [currentTrackIndex, playlist.length, loadAndPlayTrack]);
+    if (isShuffle && playlist.length > 1) {
+      const prevIdx = getRandomIndex(currentTrackIndex, playlist.length);
+      loadAndPlayTrack(prevIdx, true);
+    } else {
+      const prevIdx = (currentTrackIndex - 1 + playlist.length) % playlist.length;
+      loadAndPlayTrack(prevIdx, true);
+    }
+  }, [currentTrackIndex, playlist.length, isShuffle, getRandomIndex, loadAndPlayTrack]);
 
   const selectTrack = useCallback(
     (index: number) => {
       loadAndPlayTrack(index, true);
     },
     [loadAndPlayTrack]
+  );
+
+  const reorderPlaylist = useCallback(
+    (startIndex: number, endIndex: number) => {
+      if (startIndex === endIndex) return;
+      setPlaylist((prevPlaylist) => {
+        if (
+          startIndex < 0 ||
+          startIndex >= prevPlaylist.length ||
+          endIndex < 0 ||
+          endIndex >= prevPlaylist.length
+        ) {
+          return prevPlaylist;
+        }
+
+        const currentSong = prevPlaylist[currentTrackIndex];
+        const updated = [...prevPlaylist];
+        const [moved] = updated.splice(startIndex, 1);
+        updated.splice(endIndex, 0, moved);
+
+        // Duy trì vị trí đúng cho bài hát đang phát
+        if (currentSong) {
+          const newIdx = updated.findIndex((t) => t.file === currentSong.file);
+          if (newIdx !== -1) {
+            setCurrentTrackIndex(newIdx);
+            safeStorageSet("music_track_index", String(newIdx));
+          }
+        }
+
+        // Lưu thứ tự mới vào localStorage
+        const fileOrder = updated.map((t) => t.file);
+        safeStorageSet("music_custom_order", JSON.stringify(fileOrder));
+
+        // Đồng bộ lên API máy chủ để Admin Dashboard và toàn bộ trang cập nhật thứ tự
+        fetch("/api/music/reorder", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tracks: fileOrder }),
+        }).catch((err) => {
+          console.warn("[MusicPlayer] Không thể đồng bộ thứ tự lên máy chủ:", err);
+        });
+
+        return updated;
+      });
+    },
+    [currentTrackIndex]
   );
 
   const seekToPercent = useCallback(
@@ -295,6 +433,27 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
     }
   }, [volume, setVolume]);
 
+  const handleTrackEnded = useCallback(() => {
+    if (repeatMode === "one") {
+      const audio = audioRef.current;
+      if (audio) {
+        audio.currentTime = 0;
+        audio
+          .play()
+          .then(() => setIsPlaying(true))
+          .catch(() => setIsPlaying(false));
+      }
+      return;
+    }
+
+    if (repeatMode === "off" && !isShuffle && currentTrackIndex >= playlist.length - 1) {
+      setIsPlaying(false);
+      return;
+    }
+
+    nextTrack();
+  }, [repeatMode, isShuffle, currentTrackIndex, playlist.length, nextTrack]);
+
   const lastUpdateRef = useRef<number>(0);
 
   return (
@@ -310,6 +469,8 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
         isPlaylistExpanded,
         isFloatingExpanded,
         isMobileModalOpen,
+        isShuffle,
+        repeatMode,
         togglePlayPause,
         nextTrack,
         prevTrack,
@@ -317,6 +478,9 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
         seekToPercent,
         setVolume,
         toggleMute,
+        toggleShuffle,
+        toggleRepeatMode,
+        reorderPlaylist,
         setIsPlaylistExpanded,
         setIsFloatingExpanded,
         setIsMobileModalOpen,
@@ -358,7 +522,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
         }}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
-        onEnded={nextTrack}
+        onEnded={handleTrackEnded}
         onError={() => {
           const audio = audioRef.current;
           const track = playlist[currentTrackIndex];
