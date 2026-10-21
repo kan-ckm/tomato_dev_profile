@@ -43,11 +43,18 @@ export function CoreBlock3D({ config }: CoreBlock3DProps) {
       ...config,
     };
 
-    const renderer = new THREE.WebGLRenderer({
-      canvas,
-      antialias: true,
-      alpha: true,
-    });
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: true,
+        alpha: true,
+        powerPreference: "high-performance",
+      });
+    } catch (err) {
+      console.warn("[CoreBlock3D] WebGL initialization failed:", err);
+      return;
+    }
 
     const scene = new THREE.Scene();
     const width = root.clientWidth || 500;
@@ -768,6 +775,15 @@ export function CoreBlock3D({ config }: CoreBlock3DProps) {
     window.addEventListener("mouseup", handleMouseUp);
     window.addEventListener("mousemove", handleMouseMove);
 
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(rafId);
+      } else {
+        rafId = requestAnimationFrame(animate);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
     const resizeInitTimer = setTimeout(onResize, 100);
     rafId = requestAnimationFrame(animate);
 
@@ -779,6 +795,30 @@ export function CoreBlock3D({ config }: CoreBlock3DProps) {
       canvas.removeEventListener("mousedown", handleMouseDown);
       window.removeEventListener("mouseup", handleMouseUp);
       window.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+
+      // Giải phóng toàn bộ bộ nhớ GPU (Geometries, Materials, Textures)
+      scene.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (mesh.geometry) {
+          mesh.geometry.dispose();
+        }
+        if (mesh.material) {
+          const mats = Array.isArray(mesh.material)
+            ? mesh.material
+            : [mesh.material];
+          for (const mat of mats) {
+            const matWithMap = mat as THREE.Material & {
+              map?: THREE.Texture;
+            };
+            if (matWithMap.map) {
+              matWithMap.map.dispose();
+            }
+            mat.dispose();
+          }
+        }
+      });
+
       renderer.dispose();
     };
   }, [config]);

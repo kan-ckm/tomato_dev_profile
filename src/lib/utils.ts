@@ -31,3 +31,28 @@ export function formatTime(seconds: number): string {
   const secs = Math.floor(seconds % 60);
   return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
 }
+
+/**
+ * Đọc localStorage an toàn — chống sập ứng dụng (SecurityError) khi chạy trong
+ * Safari Private Mode hoặc In-App WebView (TikTok, Facebook, Zalo).
+ */
+export function safeStorageGet(key: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Ghi localStorage an toàn — chống sập ứng dụng (QuotaExceededError / SecurityError)
+ */
+export function safeStorageSet(key: string, value: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Bỏ qua lỗi khi trình duyệt chặn lưu trữ hoặc bộ nhớ đầy
+  }
+}

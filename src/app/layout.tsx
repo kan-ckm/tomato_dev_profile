@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { profileConfig } from "@/config/profile.config";
 import { ClientShell } from "@/components/layout/ClientShell";
+import { env } from "@/lib/env";
 import "./globals.css";
 
 export const viewport: Viewport = {
@@ -13,9 +14,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "https://tomatodevs.com"
-  ),
+  metadataBase: new URL(env.siteUrl),
   title: {
     default: profileConfig.seo.title,
     template: "%s",

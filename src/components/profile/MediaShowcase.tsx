@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { mediaBlockConfig, MediaBlockConfig } from "@/config/media.config";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +27,10 @@ export function MediaShowcase({ config: customConfig, className }: MediaShowcase
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [hasError, setHasError] = useState<boolean>(false);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [cfg.src]);
 
   const isVideo = checkIsVideo(cfg.src, cfg.type);
 

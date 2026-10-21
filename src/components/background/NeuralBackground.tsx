@@ -83,7 +83,7 @@ export function NeuralBackground() {
       canvas.height = height * dpr;
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
-      ctx.scale(dpr, dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       const newCfg = getNodeConfig(width);
       if (newCfg.count !== cfg.count) {

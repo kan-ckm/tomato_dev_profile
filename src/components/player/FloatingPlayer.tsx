@@ -24,6 +24,7 @@ export function FloatingPlayer() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const autoCollapseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const collapseStepTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Trên trang /projects hoặc /clock, bật chế độ mini-player-mode cho Desktop
   const isMiniPlayerPage =
@@ -34,7 +35,23 @@ export function FloatingPlayer() {
       clearTimeout(autoCollapseTimerRef.current);
       autoCollapseTimerRef.current = null;
     }
+    if (collapseStepTimerRef.current) {
+      clearTimeout(collapseStepTimerRef.current);
+      collapseStepTimerRef.current = null;
+    }
   }, []);
+
+  const collapsePlayerSmoothly = useCallback(() => {
+    if (isPlaylistExpanded) {
+      setIsPlaylistExpanded(false);
+      if (collapseStepTimerRef.current) clearTimeout(collapseStepTimerRef.current);
+      collapseStepTimerRef.current = setTimeout(() => {
+        setIsFloatingExpanded(false);
+      }, 800);
+    } else {
+      setIsFloatingExpanded(false);
+    }
+  }, [isPlaylistExpanded, setIsPlaylistExpanded, setIsFloatingExpanded]);
 
   const startAutoCollapse = useCallback(
     (delay = 2500) => {
@@ -45,17 +62,10 @@ export function FloatingPlayer() {
           startAutoCollapse(2500);
           return;
         }
-        setIsPlaylistExpanded((prevPlaylist) => {
-          if (prevPlaylist) {
-            setTimeout(() => setIsFloatingExpanded(false), 800);
-            return false;
-          }
-          setIsFloatingExpanded(false);
-          return false;
-        });
+        collapsePlayerSmoothly();
       }, delay);
     },
-    [stopAutoCollapse, setIsPlaylistExpanded, setIsFloatingExpanded]
+    [stopAutoCollapse, collapsePlayerSmoothly]
   );
 
   // Click ra ngoài vùng player sẽ tự động đóng
@@ -64,19 +74,14 @@ export function FloatingPlayer() {
       if (!containerRef.current) return;
       if (!containerRef.current.contains(e.target as Node)) {
         if (isFloatingExpanded || isPlaylistExpanded) {
-          if (isPlaylistExpanded) {
-            setIsPlaylistExpanded(false);
-            setTimeout(() => setIsFloatingExpanded(false), 800);
-          } else {
-            setIsFloatingExpanded(false);
-          }
+          collapsePlayerSmoothly();
         }
       }
     };
 
     document.addEventListener("click", handleOutsideClick);
     return () => document.removeEventListener("click", handleOutsideClick);
-  }, [isFloatingExpanded, isPlaylistExpanded, setIsFloatingExpanded, setIsPlaylistExpanded]);
+  }, [isFloatingExpanded, isPlaylistExpanded, collapsePlayerSmoothly]);
 
   useEffect(() => {
     return () => stopAutoCollapse();

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { profileConfig } from "@/config/profile.config";
-import { formatShort } from "@/lib/utils";
+import { formatShort, safeStorageGet, safeStorageSet } from "@/lib/utils";
 import { TikTokStatsResponse } from "@/types";
 
 const STATS_URL = "/api/tiktok-stats";
@@ -23,7 +23,7 @@ export function TikTokCard() {
 
     // 1. Đọc cache từ localStorage nếu còn hạn
     try {
-      const cached = localStorage.getItem(CACHE_KEY);
+      const cached = safeStorageGet(CACHE_KEY);
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed && typeof parsed.followers === "number") {
@@ -49,18 +49,14 @@ export function TikTokCard() {
         setFollowers(formatShort(fRaw));
         setLikes(formatShort(lRaw));
 
-        try {
-          localStorage.setItem(
-            CACHE_KEY,
-            JSON.stringify({
-              followers: fRaw,
-              likes: lRaw,
-              timestamp: Date.now(),
-            })
-          );
-        } catch {
-          // Bỏ qua nếu đầy bộ nhớ localStorage
-        }
+        safeStorageSet(
+          CACHE_KEY,
+          JSON.stringify({
+            followers: fRaw,
+            likes: lRaw,
+            timestamp: Date.now(),
+          })
+        );
       })
       .catch(() => {
         // Giữ nguyên giá trị fallback nếu mất mạng

@@ -13,6 +13,7 @@ import {
   DEFAULT_VOLUME,
   fallbackPlaylist,
 } from "@/config/music.config";
+import { safeStorageGet, safeStorageSet } from "@/lib/utils";
 import { MusicTrack } from "@/types";
 
 interface MusicPlayerContextValue {
@@ -80,7 +81,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
     // Đặt mặc định trạng thái sẵn sàng phát khi người dùng mở trang web
     isManuallyPausedRef.current = false;
 
-    const savedVol = localStorage.getItem("music_volume");
+    const savedVol = safeStorageGet("music_volume");
     const initialVol = savedVol !== null ? parseFloat(savedVol) : DEFAULT_VOLUME;
     const validVol = isNaN(initialVol) ? DEFAULT_VOLUME : Math.max(0, Math.min(1, initialVol));
     setVolumeState(validVol);
@@ -189,8 +190,8 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       if (!track || !audioRef.current) return;
 
       setCurrentTrackIndex(index);
-      localStorage.setItem("music_track_index", String(index));
-      localStorage.setItem("music_track_file", track.file);
+      safeStorageSet("music_track_index", String(index));
+      safeStorageSet("music_track_file", track.file);
 
       const audio = audioRef.current;
       const targetSrc = track.url || `/assets/music/${encodeURIComponent(track.file)}`;
@@ -201,7 +202,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
 
       if (autoPlay) {
         isManuallyPausedRef.current = false;
-        localStorage.setItem("music_paused", "false");
+        safeStorageSet("music_paused", "false");
         audio
           .play()
           .then(() => setIsPlaying(true))
@@ -222,7 +223,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
 
     if (audio.paused) {
       isManuallyPausedRef.current = false;
-      localStorage.setItem("music_paused", "false");
+      safeStorageSet("music_paused", "false");
       audio
         .play()
         .then(() => setIsPlaying(true))
@@ -232,7 +233,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
         });
     } else {
       isManuallyPausedRef.current = true;
-      localStorage.setItem("music_paused", "true");
+      safeStorageSet("music_paused", "true");
       audio.pause();
       setIsPlaying(false);
     }
@@ -276,7 +277,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
   const setVolume = useCallback((val: number) => {
     const clamped = Math.max(0, Math.min(1, val));
     setVolumeState(clamped);
-    localStorage.setItem("music_volume", String(clamped));
+    safeStorageSet("music_volume", String(clamped));
     if (clamped > 0) {
       lastNonZeroVolumeRef.current = clamped;
     }
@@ -336,7 +337,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
             const now = performance.now();
             if (now - lastUpdateRef.current >= 1000) {
               lastUpdateRef.current = now;
-              localStorage.setItem("music_current_time", String(cur));
+              safeStorageSet("music_current_time", String(cur));
             }
           }
         }}

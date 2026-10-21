@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface VinylDiscProps {
@@ -29,6 +29,10 @@ export function VinylDisc({
   className,
 }: VinylDiscProps) {
   const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [cover]);
 
   const shouldSpin = isActive && isPlaying;
   const isPausedState = isActive && !isPlaying;
