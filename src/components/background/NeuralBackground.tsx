@@ -32,14 +32,14 @@ export function NeuralBackground() {
     const getNodeConfig = (w: number) => {
       if (w <= 768) {
         // Mobile
-        return { count: 52, maxDist: 115, mouseR: 140, lineAlphaFactor: 0.26 };
+        return { count: 85, maxDist: 110, mouseR: 140, lineAlphaFactor: 0.24 };
       }
       if (w <= 1024) {
         // Tablet / Small screen
-        return { count: 95, maxDist: 155, mouseR: 180, lineAlphaFactor: 0.28 };
+        return { count: 150, maxDist: 145, mouseR: 180, lineAlphaFactor: 0.26 };
       }
-      // Laptop & Desktop màn hình lớn: tăng số lượng hạt dày đặc và tầm liên kết rộng
-      return { count: 165, maxDist: 195, mouseR: 240, lineAlphaFactor: 0.32 };
+      // Laptop & Desktop màn hình lớn: tăng số lượng nơ-ron dày đặc và sinh động
+      return { count: 280, maxDist: 175, mouseR: 240, lineAlphaFactor: 0.28 };
     };
 
     let cfg = getNodeConfig(width);
