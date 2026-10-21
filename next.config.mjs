@@ -1,4 +1,15 @@
 /** @type {import('next').NextConfig} */
+
+const r2PublicOrigin = (() => {
+  try {
+    return process.env.R2_PUBLIC_URL
+      ? new URL(process.env.R2_PUBLIC_URL).origin
+      : "";
+  } catch {
+    return "";
+  }
+})();
+
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
@@ -54,6 +65,10 @@ const nextConfig = {
         source: "/(.*)",
         headers: [
           {
+            key: "X-DNS-Prefetch-Control",
+            value: "on",
+          },
+          {
             key: "X-Content-Type-Options",
             value: "nosniff",
           },
@@ -67,7 +82,8 @@ const nextConfig = {
           },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+            value:
+              "camera=(), microphone=(), geolocation=(), interest-cohort=()",
           },
           {
             key: "Strict-Transport-Security",
@@ -77,12 +93,12 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com data:",
               "img-src 'self' data: blob: https:",
-              "media-src 'self' data: blob: https://*.r2.dev https://*.cloudflarestorage.com https:",
-              "connect-src 'self' https://*.upstash.io https://*.r2.dev https://*.cloudflarestorage.com",
+              `media-src 'self' data: blob: https://*.r2.dev https://*.cloudflarestorage.com ${r2PublicOrigin} https:`.trim(),
+              `connect-src 'self' https://*.upstash.io https://*.r2.dev https://*.cloudflarestorage.com ${r2PublicOrigin}`.trim(),
               "frame-ancestors 'self'",
               "base-uri 'self'",
               "form-action 'self'",
