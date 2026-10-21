@@ -16,7 +16,14 @@
     "redis:down": "docker compose down",
     "redis:status": "node scripts/redis-status.mjs",
     "redis:flush": "node scripts/redis-status.mjs --flush",
-    "redis:logs": "docker compose logs -f"
+    "redis:logs": "docker compose logs -f",
+    "homelab:up": "bash scripts/homelab/run.sh up",
+    "homelab:sync": "bash scripts/homelab/run.sh sync",
+    "homelab:watch": "bash scripts/homelab/run.sh watch",
+    "homelab:tunnel": "bash scripts/homelab/run.sh set-tunnel",
+    "homelab:status": "bash scripts/homelab/run.sh status",
+    "homelab:logs": "bash scripts/homelab/run.sh logs",
+    "homelab:down": "bash scripts/homelab/run.sh down"
   },
   "repository": {
     "type": "git",
