@@ -12,7 +12,7 @@ export default function HomePage() {
       <ProfileSidebar />
 
       {/* Right Main Content (Scrollable on Desktop) */}
-      <main className="main-content custom-scrollbar lg:h-[calc(100vh-60px)] lg:overflow-y-auto lg:rounded-panel lg:border lg:border-white/[0.05] lg:bg-white/[0.02] lg:pb-[30px] lg:pt-2.5 lg:shadow-[0_10px_30px_rgba(0,0,0,0.15)] lg:backdrop-blur-[5px]">
+      <main className="main-content custom-scrollbar lg:h-[calc(100vh-60px)] lg:overflow-y-auto lg:rounded-panel lg:border lg:border-white/[0.05] lg:bg-white/[0.02] lg:pb-[80px] lg:pt-2.5 lg:shadow-[0_10px_30px_rgba(0,0,0,0.15)] lg:backdrop-blur-[5px]">
         {/* Khối 1: Danh sách Liên kết (Links) - Giới hạn chiều cao & Cuộn mượt mà */}
         <div className="section-header mx-6 mb-3 mt-7 flex items-center justify-between gap-2.5 font-display text-[0.7rem] font-bold uppercase tracking-[0.15em] text-muted lg:!mt-5">
           <div className="flex items-center gap-2">

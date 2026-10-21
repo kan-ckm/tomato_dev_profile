@@ -79,7 +79,7 @@ export function BottomNav() {
     <nav
       id="bottom-nav"
       aria-label="Main Navigation"
-      className="bottom-nav fixed bottom-6 left-4 z-[9998] flex items-center gap-1.5 rounded-full border border-white/15 bg-black/70 p-1.5 shadow-[0_15px_35px_rgba(0,0,0,0.5),0_0_20px_rgba(255,255,255,0.06)] backdrop-blur-xl transition-all duration-300 md:left-6"
+      className="bottom-nav fixed bottom-6 left-4 z-[9998] flex items-center gap-1.5 rounded-full border border-white/15 bg-black/70 p-1.5 shadow-[0_15px_35px_rgba(0,0,0,0.5),0_0_20px_rgba(255,255,255,0.06)] backdrop-blur-xl transition-all duration-300 md:left-1/2 md:-translate-x-1/2"
     >
       {NAV_ITEMS.map((item) => {
         const active = isActive(item.href);
