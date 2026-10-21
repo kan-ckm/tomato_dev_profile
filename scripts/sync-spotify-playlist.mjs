@@ -26,7 +26,13 @@ async function fetchSpotifyPlaylistTracks(
   limit = 20
 ) {
   console.log("\n🎵 [2/4] Đang lấy danh sách bài hát từ Spotify playlist...");
-  const safeId = playlistId.replace(/[^a-zA-Z0-9]/g, "");
+  let safeId = playlistId;
+  const match = playlistId.match(/playlist\/([a-zA-Z0-9]+)/);
+  if (match) {
+    safeId = match[1];
+  } else {
+    safeId = playlistId.replace(/[^a-zA-Z0-9]/g, "");
+  }
   const res = await fetch(`https://open.spotify.com/embed/playlist/${safeId}`, {
     signal: AbortSignal.timeout(10000),
   });
@@ -138,7 +144,8 @@ async function main() {
   console.log("========================================================");
 
   const playlistArg = process.argv[2] || DEFAULT_SPOTIFY_PLAYLIST_ID;
-  const tracks = await fetchSpotifyPlaylistTracks(playlistArg, 20);
+  const limitArg = process.argv[3] ? parseInt(process.argv[3], 10) : 20;
+  const tracks = await fetchSpotifyPlaylistTracks(playlistArg, limitArg);
 
   const currentCount = readLocalTracks().length;
   if (!checkPlaylistLimit(currentCount, tracks.length)) {
