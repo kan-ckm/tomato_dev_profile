@@ -12,6 +12,7 @@ import {
   uploadTracksAndCoversToR2,
   writeMusicConfigFile,
   readLocalTracks,
+  checkPlaylistLimit,
 } from "./lib/shared.mjs";
 
 const { s3, bucketName } = getR2Config();
@@ -255,6 +256,11 @@ async function main() {
   console.log("========================================================");
   console.log("   BREAKCORE MIX SYNC & CLOUD UPDATE - TOMATODEVS");
   console.log("========================================================");
+
+  const existingLocal = readLocalTracks();
+  if (!checkPlaylistLimit(existingLocal.length, TRACKS_METADATA.length)) {
+    process.exit(1);
+  }
 
   const mixMp3Path = ensureMixAudioFile();
 

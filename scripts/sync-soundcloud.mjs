@@ -30,6 +30,7 @@ import {
   invalidateRedisMusicCache,
   OPTIMAL_AUDIO_ARGS,
   embedCoverWithFfmpeg,
+  checkPlaylistLimit,
 } from "./lib/shared.mjs";
 
 const { s3, bucketName } = getR2Config();
@@ -304,6 +305,11 @@ async function main() {
   if (trackUrls.length === 0) {
     console.log("⚠️ Không tìm thấy bài hát nào từ nguồn SoundCloud đã cung cấp.");
     process.exit(0);
+  }
+
+  const currentCount = readLocalTracks().length;
+  if (!checkPlaylistLimit(currentCount, trackUrls.length)) {
+    process.exit(1);
   }
 
   console.log(

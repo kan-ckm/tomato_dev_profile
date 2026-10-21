@@ -219,19 +219,54 @@ export async function uploadTracksAndCoversToR2(s3, bucketName, tracks) {
   await invalidateRedisMusicCache();
 }
 
-export function writeMusicConfigFile(tracks) {
+export const MAX_PLAYLIST_LIMIT = 70;
+
+/**
+ * Kiểm tra giới hạn số lượng bài hát tối đa trong thư viện (70 bài).
+ * Nếu vượt quá 70 bài, xuất log cảnh báo yêu cầu xóa bớt bài khác.
+ */
+export function checkPlaylistLimit(currentCount, addingCount = 1) {
+  if (currentCount + addingCount > MAX_PLAYLIST_LIMIT) {
+    console.error("\n========================================================");
+    console.error("❌ [GIỚI HẠN THƯ VIỆN] ĐÃ ĐẠT GIỚI HẠN TỐI ĐA 70 BÀI HÁT!");
+    console.error("========================================================");
+    console.error(
+      `  - Số lượng hiện tại:  ${currentCount} / ${MAX_PLAYLIST_LIMIT} bài`
+    );
+    console.error(`  - Số lượng muốn thêm: ${addingCount} bài`);
+    console.error(
+      `  - Tổng dự kiến:       ${currentCount + addingCount} bài (Vượt quá ${
+        currentCount + addingCount - MAX_PLAYLIST_LIMIT
+      } bài)`
+    );
+    console.error(
+      "\n⚠️  BẠN CẦN XÓA BỚT BÀI HÁT KHÁC TRONG THƯ VIỆN ĐỂ CÓ THỂ THÊM BÀI MỚI."
+    );
+    console.error("   (Quản lý và xóa bài hát thông qua Admin Dashboard)");
+    console.error("========================================================\n");
+    return false;
+  }
+  return true;
+}
+
+export function writeMusicConfigFile(tracks, preserveOrder = false) {
   if (!tracks || tracks.length === 0) return;
   const configPath = path.join(rootDir, "src", "config", "music.config.ts");
-  const preferredDefault = "dracodraco - through the light.mp3";
-  const defaultTrack =
-    tracks.find((t) => t.file.toLowerCase() === preferredDefault) || tracks[0];
+  const defaultTrack = tracks[0];
 
-  // Sắp xếp bài hát mặc định lên đầu
-  const sortedTracks = [...tracks].sort((a, b) => {
-    if (a.file.toLowerCase() === defaultTrack.file.toLowerCase()) return -1;
-    if (b.file.toLowerCase() === defaultTrack.file.toLowerCase()) return 1;
-    return a.file.localeCompare(b.file, undefined, { sensitivity: "base" });
-  });
+  let sortedTracks = [...tracks];
+  if (!preserveOrder) {
+    const preferredDefault = "dracodraco - through the light.mp3";
+    const foundDefault = tracks.find(
+      (t) => t.file.toLowerCase() === preferredDefault
+    );
+    const topTrack = foundDefault || defaultTrack;
+    sortedTracks.sort((a, b) => {
+      if (a.file.toLowerCase() === topTrack.file.toLowerCase()) return -1;
+      if (b.file.toLowerCase() === topTrack.file.toLowerCase()) return 1;
+      return a.file.localeCompare(b.file, undefined, { sensitivity: "base" });
+    });
+  }
 
   const playlistItems = sortedTracks.map((t) => {
     const coverUrl =

@@ -35,6 +35,7 @@ import {
   invalidateRedisMusicCache,
   OPTIMAL_AUDIO_ARGS,
   embedCoverWithFfmpeg,
+  checkPlaylistLimit,
 } from "./lib/shared.mjs";
 
 const { s3, bucketName } = getR2Config();
@@ -279,6 +280,11 @@ async function main() {
   const arg = process.argv.slice(2).join(" ").trim();
   if (!arg || arg === "-h" || arg === "--help") {
     printUsageAndExit();
+  }
+
+  const currentLocalTracks = readLocalTracks();
+  if (!checkPlaylistLimit(currentLocalTracks.length, 1)) {
+    process.exit(1);
   }
 
   console.log("========================================================");

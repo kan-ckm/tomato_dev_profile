@@ -13,6 +13,7 @@ import {
   readLocalTracks,
   OPTIMAL_AUDIO_ARGS,
   embedCoverWithFfmpeg,
+  checkPlaylistLimit,
 } from "./lib/shared.mjs";
 
 const { s3, bucketName } = getR2Config();
@@ -138,6 +139,11 @@ async function main() {
 
   const playlistArg = process.argv[2] || DEFAULT_SPOTIFY_PLAYLIST_ID;
   const tracks = await fetchSpotifyPlaylistTracks(playlistArg, 20);
+
+  const currentCount = readLocalTracks().length;
+  if (!checkPlaylistLimit(currentCount, tracks.length)) {
+    process.exit(1);
+  }
 
   console.log("\n📥 [2/3] Bắt đầu tải các bản nhạc...");
   const successfulTracks = [];
