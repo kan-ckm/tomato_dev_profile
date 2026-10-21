@@ -1,0 +1,37 @@
+# Dependencies & Build Artifacts
+node_modules
+**/node_modules
+.next
+out
+build
+dist
+coverage
+.nyc_output
+*.tsbuildinfo
+
+# Git & Docs (Never bake into Docker context)
+.git
+.gitignore
+.gitattributes
+docs
+README.md
+*.md
+
+# Secrets & Environment files (Injected at runtime via docker-compose)
+.env
+.env*
+*.pem
+*.key
+*.crt
+*.csr
+
+# Homelab & IDE files
+scripts/homelab
+docker/nginx/ssl
+.vscode
+.idea
+.backup
+tmp
+temp
+*.log
+.DS_Store

@@ -1,5 +1,7 @@
+name: tomatodevs-profile
+
 services:
-  # 1. Core Redis 7 Server (Tối ưu hóa bộ nhớ LRU & lưu trữ bền vững AOF)
+  # 1. Core Redis 7 Server (Lưu trữ bền vững AOF + Bộ nhớ đệm LRU siêu tốc)
   redis:
     image: redis:7.4-alpine
     container_name: tomatodevs-redis
@@ -23,9 +25,9 @@ services:
       timeout: 3s
       retries: 5
     networks:
-      - tomato-redis-net
+      - tomato-profile-net
 
-  # 2. Serverless Redis HTTP Proxy (Giúp @upstash/redis kết nối trực tiếp vào Docker Redis cục bộ)
+  # 2. Serverless Redis HTTP Proxy (Cầu nối HTTP cho @upstash/redis)
   redis-http:
     image: hiett/serverless-redis-http:latest
     container_name: tomatodevs-redis-http
@@ -40,13 +42,84 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - tomato-redis-net
+      - tomato-profile-net
+
+  # 3. Next.js 15 Standalone Application (TomatoDevs Profile)
+  profile-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tomatodevs/profile-app:latest
+    container_name: tomatodevs-profile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: "0.0.0.0"
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://tomatodev.me}
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN:-https://tomatodev.me,https://www.tomatodev.me,https://tomatodevs.com}
+      UPSTASH_REDIS_REST_URL: "http://redis-http:80"
+      UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:-tomato_local_redis_secret_token}
+    volumes:
+      # Mount trực tiếp thư mục assets để cập nhật ảnh/nhạc/GIF tức thì không cần build lại image
+      - ./public/assets:/app/public/assets:ro
+    depends_on:
+      redis-http:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    networks:
+      - tomato-profile-net
+
+  # 4. Nginx Gateway Nội bộ (Nhận lưu lượng từ Cloudflare Tunnel qua http://nginx:80)
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: tomatodevs-nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_HTTP_PORT:-8080}:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      profile-app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/nginx-health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - tomato-profile-net
+
+  # 5. Cloudflare Zero-Trust Tunnel (Phương án A: SSL Cloudflare + Không cần mở Port Router)
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: tomatodevs-tunnel
+    restart: unless-stopped
+    profiles:
+      - tunnel
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      nginx:
+        condition: service_healthy
+    networks:
+      - tomato-profile-net
 
 volumes:
   tomato_redis_data:
     name: tomatodevs_redis_data
 
 networks:
-  tomato-redis-net:
-    name: tomatodevs_redis_net
+  tomato-profile-net:
+    name: tomatodevs_profile_net
     driver: bridge
