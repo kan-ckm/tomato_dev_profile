@@ -20,6 +20,12 @@
 *.key
 *.cert
 *.crt
+*.csr
+/docker/nginx/ssl/
+
+# Private Documentation & Homelab Config (Do not push to GitHub)
+/docs/
+/scripts/homelab/.env
 
 # IDE & Editor files
 .idea/
