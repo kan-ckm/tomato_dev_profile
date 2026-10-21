@@ -86,7 +86,7 @@ npm run homelab:logs
 
 ## Music Synchronization & Cloud Storage
 
-Automated CLI tools to download, tag, and stream music via Cloudflare R2:
+Automated CLI tools to download, tag, optimize, and stream music via Cloudflare R2:
 
 ```bash
 # Download any single song from YouTube, Spotify, SoundCloud, or search query
@@ -102,12 +102,19 @@ npm run spotify:sync <playlist_id>
 # Slice tracks from YouTube Breakcore Mix
 npm run breakcore:sync
 
-# Optimize all existing audio & embedded covers for fast web streaming
+# Optimize all audio (MP3 VBR 2, 44.1kHz) & embedded artwork (MJPEG) for instant web streaming
 npm run music:optimize
 
 # Upload local MP3s & covers from public/assets/music to Cloudflare R2
 npm run r2:upload
 ```
+
+### Music Player Features & Playlist Management
+
+- **Drag & Drop Reordering**: Reorder songs on Desktop & Mobile with smooth grab-handle dragging and instant persistence to `localStorage`.
+- **Shuffle & Repeat**: Toggle random track shuffle or cycle repeat modes (`all` ➔ `one` ➔ `off`).
+- **Strict 70-Track Maximum Limit**: All sync and download tools enforce a strict 70-track limit with explicit deletion warnings (`⚠️ Cần xóa bớt bài khác trong thư viện để có thể thêm bài mới`).
+- **Admin Dashboard API**: `POST /api/music/reorder` allows custom Admin Dashboards to drag-and-drop update the live playlist order and immediately synchronize Cloudflare R2 / Redis cache.
 
 ---
 
