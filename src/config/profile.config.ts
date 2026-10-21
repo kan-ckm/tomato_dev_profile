@@ -1,9 +1,9 @@
 import { ProfileConfig, SocialLink } from "@/types";
 
 export const profileConfig: ProfileConfig = {
-  username: "TOMATODEVS",
-  handle: "TomatoDevs · Redre",
-  greeting: "ごきげんよう。",
+  username: "TOMATODEV",
+  handle: "TomatoDev · Redre",
+  greeting: "Hello。",
   roleBold: "Member of Redre",
   roleSuffix: " — Redre dev.",
   collabText: "DM for collabs: discord",
@@ -15,7 +15,7 @@ export const profileConfig: ProfileConfig = {
   statusText: "Online",
   tiktok: {
     displayName: "Tomato Dev",
-    handle: "@tomatodevs",
+    handle: "@tomatodev",
     profileUrl: "https://www.tiktok.com/@tuanttuu",
     followUrl: "https://www.tiktok.com/@tuanttuu",
     fallbackFollowers: 992,
@@ -23,14 +23,14 @@ export const profileConfig: ProfileConfig = {
   },
   footer: {
     text: "Powered by",
-    author: "TomatoDevs",
+    author: "TomatoDev",
     url: "https://github.com/kan-ckm",
   },
   seo: {
-    title: "TOMATODEVS — BIO",
+    title: "TOMATODEV",
     description:
-      "ごきげんよう。 Member of Redre. For any discussion, please contact me via discord @nxcjcd",
-    siteName: "TomatoDevs Profile",
+      "Hello。 Member of Redre. For any discussion, please contact me via discord @nxcjcd",
+    siteName: "TomatoDev Profile",
     ogImage: "/assets/avatar/avatar.jpg?v=2",
     themeColor: "#050508",
   },
