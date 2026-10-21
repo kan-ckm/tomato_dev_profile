@@ -4,11 +4,13 @@ import React, { useCallback, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useMusicPlayer } from "./MusicPlayerContext";
 import { PlayerPanel } from "./PlayerPanel";
+import { VinylDisc } from "./VinylDisc";
 import { cn } from "@/lib/utils";
 
 export function FloatingPlayer() {
   const pathname = usePathname();
   const {
+    currentTrack,
     isPlaying,
     isPlaylistExpanded,
     isFloatingExpanded,
@@ -232,27 +234,34 @@ export function FloatingPlayer() {
             isPlaying && "drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]"
           )}
         >
-          {isPlaying ? (
-            <div className="flex h-[22px] items-center justify-center gap-[3.5px]">
-              <span
-                className={cn(
-                  "music-wave-1 w-[3.5px] rounded-[4px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]",
-                  isFloatingExpanded && "!bg-black"
-                )}
+          {isFloatingExpanded ? (
+            <svg
+              className="h-5 w-5 stroke-current"
+              viewBox="0 0 24 24"
+              fill="none"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          ) : isPlaying ? (
+            currentTrack?.cover ? (
+              <VinylDisc
+                cover={currentTrack.cover}
+                alt={currentTrack.name}
+                isActive={true}
+                isPlaying={isPlaying}
+                size="sm"
               />
-              <span
-                className={cn(
-                  "music-wave-2 w-[3.5px] rounded-[4px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]",
-                  isFloatingExpanded && "!bg-black"
-                )}
-              />
-              <span
-                className={cn(
-                  "music-wave-3 w-[3.5px] rounded-[4px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]",
-                  isFloatingExpanded && "!bg-black"
-                )}
-              />
-            </div>
+            ) : (
+              <div className="flex h-[22px] items-center justify-center gap-[3.5px]">
+                <span className="music-wave-1 w-[3.5px] rounded-[4px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+                <span className="music-wave-2 w-[3.5px] rounded-[4px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+                <span className="music-wave-3 w-[3.5px] rounded-[4px] bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+              </div>
+            )
           ) : (
             <svg
               className="h-6 w-6 stroke-current"
@@ -268,20 +277,14 @@ export function FloatingPlayer() {
                 y1="9"
                 x2="16"
                 y2="15"
-                className={cn(
-                  "stroke-accent3 stroke-[2.5]",
-                  isFloatingExpanded && "!stroke-white"
-                )}
+                className="stroke-accent3 stroke-[2.5]"
               />
               <line
                 x1="16"
                 y1="9"
                 x2="22"
                 y2="15"
-                className={cn(
-                  "stroke-accent3 stroke-[2.5]",
-                  isFloatingExpanded && "!stroke-white"
-                )}
+                className="stroke-accent3 stroke-[2.5]"
               />
             </svg>
           )}

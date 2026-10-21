@@ -97,25 +97,14 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
     }
 
     const initTrackFromStorage = (tracks: MusicTrack[]) => {
-      const savedFile = localStorage.getItem("music_track_file");
-      const savedTrackIdx = localStorage.getItem("music_track_index");
-      let resolvedIndex = 0;
-
-      if (savedFile) {
-        const foundIdx = tracks.findIndex((t) => t.file === savedFile);
-        if (foundIdx !== -1) {
-          resolvedIndex = foundIdx;
-        } else if (savedTrackIdx !== null) {
-          const parsed = parseInt(savedTrackIdx, 10);
-          resolvedIndex = !isNaN(parsed) && parsed < tracks.length ? parsed : 0;
-        }
-      } else if (savedTrackIdx !== null) {
-        const parsed = parseInt(savedTrackIdx, 10);
-        resolvedIndex = !isNaN(parsed) && parsed < tracks.length ? parsed : 0;
-      } else {
-        const defIdx = tracks.findIndex((t) => t.file === DEFAULT_TRACK_FILE);
-        resolvedIndex = defIdx !== -1 ? defIdx : 0;
-      }
+      // "through the light" luôn luôn được ưu tiên phát trước khi tải trang
+      const throughTheLightIdx = tracks.findIndex(
+        (t) =>
+          t.file === DEFAULT_TRACK_FILE ||
+          t.name.toLowerCase().includes("through the light") ||
+          t.file.toLowerCase().includes("through the light")
+      );
+      const resolvedIndex = throughTheLightIdx !== -1 ? throughTheLightIdx : 0;
 
       setCurrentTrackIndex(resolvedIndex);
       const track = tracks[resolvedIndex];
@@ -123,23 +112,6 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
         const targetSrc = track.url || `/assets/music/${encodeURIComponent(track.file)}`;
         if (audioRef.current.src !== targetSrc) {
           audioRef.current.src = targetSrc;
-        }
-
-        const savedTime = localStorage.getItem("music_current_time");
-        if (savedTime !== null) {
-          const parsedTime = parseFloat(savedTime);
-          if (!isNaN(parsedTime) && isFinite(parsedTime) && parsedTime >= 0) {
-            const onLoaded = () => {
-              if (audioRef.current && isFinite(audioRef.current.duration)) {
-                if (parsedTime < audioRef.current.duration) {
-                  audioRef.current.currentTime = parsedTime;
-                  setCurrentTime(parsedTime);
-                }
-              }
-              audioRef.current?.removeEventListener("loadedmetadata", onLoaded);
-            };
-            audioRef.current.addEventListener("loadedmetadata", onLoaded);
-          }
         }
       }
     };

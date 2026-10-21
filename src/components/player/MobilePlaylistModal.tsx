@@ -2,12 +2,14 @@
 
 import React from "react";
 import { useMusicPlayer } from "./MusicPlayerContext";
+import { VinylDisc } from "./VinylDisc";
 import { cn } from "@/lib/utils";
 
 export function MobilePlaylistModal() {
   const {
     playlist,
     currentTrackIndex,
+    isPlaying,
     isMobileModalOpen,
     selectTrack,
     setIsMobileModalOpen,
@@ -28,13 +30,13 @@ export function MobilePlaylistModal() {
       <div
         id="modal-overlay"
         onClick={() => setIsMobileModalOpen(false)}
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
       />
 
       {/* Modal Content */}
       <div
         className={cn(
-          "relative w-full max-w-[360px] overflow-hidden rounded-panel border border-white/10 bg-[rgba(25,25,30,0.85)] shadow-[0_25px_50px_rgba(0,0,0,0.5)] backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.175,0.885,0.32,1.275)]",
+          "relative w-full max-w-[380px] overflow-hidden rounded-panel border border-white/10 bg-[rgba(20,20,25,0.92)] shadow-[0_25px_50px_rgba(0,0,0,0.6)] backdrop-blur-xl transition-all duration-500 ease-[cubic-bezier(0.175,0.885,0.32,1.275)]",
           isMobileModalOpen ? "translate-y-0 scale-100" : "translate-y-[30px] scale-95"
         )}
       >
@@ -81,7 +83,7 @@ export function MobilePlaylistModal() {
           </button>
         </div>
 
-        <div className="custom-scrollbar max-h-[400px] overflow-y-auto p-3">
+        <div className="custom-scrollbar max-h-[420px] space-y-1.5 overflow-y-auto p-3">
           {playlist.map((track, index) => {
             const active = index === currentTrackIndex;
             return (
@@ -92,36 +94,57 @@ export function MobilePlaylistModal() {
                   setIsMobileModalOpen(false);
                 }}
                 className={cn(
-                  "mb-1 flex cursor-pointer items-center gap-3.5 rounded-2xl border px-4 py-3 transition-all duration-200",
+                  "group flex cursor-pointer items-center gap-3.5 rounded-2xl border p-2.5 transition-all duration-200",
                   active
-                    ? "border-accent/20 bg-accent/[0.12]"
-                    : "border-transparent hover:bg-white/[0.04]"
+                    ? "border-accent/30 bg-accent/[0.15] shadow-[0_4px_16px_rgba(0,0,0,0.3)]"
+                    : "border-white/[0.04] bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.06]"
                 )}
               >
-                <div
-                  className={cn(
-                    "w-5 font-numeric text-xs font-semibold",
-                    active ? "text-accent" : "text-muted"
-                  )}
-                >
-                  {String(index + 1).padStart(2, "0")}
-                </div>
+                {/* Rotating Vinyl Disc */}
+                <VinylDisc
+                  cover={track.cover}
+                  alt={track.name}
+                  isActive={active}
+                  isPlaying={isPlaying}
+                  size="md"
+                />
+
                 <div className="min-w-0 flex-1">
                   <div
                     className={cn(
-                      "mb-0.5 truncate text-[0.9rem] font-medium",
-                      active ? "text-accent3" : "text-white"
+                      "mb-0.5 truncate text-[0.88rem] font-semibold tracking-tight",
+                      active ? "text-accent3" : "text-white group-hover:text-white"
                     )}
                   >
                     {track.name}
                   </div>
                   <div className="truncate text-[0.72rem] text-muted">{track.artist}</div>
                 </div>
+
+                {/* Animated Equalizer Indicator when Active */}
                 {active && (
-                  <div className="h-3 w-3 text-accent">
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
+                  <div className="mr-2 flex h-3.5 items-end gap-[2px]">
+                    <span
+                      className={cn(
+                        "w-[2.5px] rounded-full bg-accent transition-all duration-300",
+                        isPlaying ? "animate-[bounce_0.6s_ease-in-out_infinite]" : "h-2"
+                      )}
+                      style={{ height: "100%" }}
+                    />
+                    <span
+                      className={cn(
+                        "w-[2.5px] rounded-full bg-accent transition-all duration-300",
+                        isPlaying ? "animate-[bounce_0.8s_ease-in-out_infinite_0.15s]" : "h-3"
+                      )}
+                      style={{ height: "60%" }}
+                    />
+                    <span
+                      className={cn(
+                        "w-[2.5px] rounded-full bg-accent transition-all duration-300",
+                        isPlaying ? "animate-[bounce_0.7s_ease-in-out_infinite_0.3s]" : "h-1.5"
+                      )}
+                      style={{ height: "80%" }}
+                    />
                   </div>
                 )}
               </div>
