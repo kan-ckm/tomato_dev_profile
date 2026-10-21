@@ -7,8 +7,8 @@ import { BioLink } from "@/types";
 export const bioLinks: BioLink[] = [
   {
     id: "link-ReDreaming-discord",
-    title: "Official Community • Discord",
-    subtitle: "discord.gg/ReDreaming",
+    title: "Our Discord Community",
+    subtitle: "discord.gg/ReDreaming • Join our server",
     url: "https://discord.gg/EVegtwFUw",
     iconSrc: "/assets/link/lilith.png",
     iconBg: "linear-gradient(135deg,#1a1a2e,#16213e)",
