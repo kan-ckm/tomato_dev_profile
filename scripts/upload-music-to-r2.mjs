@@ -17,6 +17,8 @@ import {
   coversDir,
   getR2Config,
   invalidateRedisMusicCache,
+  readLocalTracks,
+  writeMusicConfigFile,
 } from "./lib/shared.mjs";
 
 const { s3, accountId, bucketName, publicUrl, isEnabled } = getR2Config();
@@ -121,6 +123,11 @@ async function run() {
   }
 
   await invalidateRedisMusicCache();
+
+  const localTracks = readLocalTracks();
+  if (localTracks.length > 0) {
+    writeMusicConfigFile(localTracks);
+  }
 
   console.log("========================================================");
   console.log(

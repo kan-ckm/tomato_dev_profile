@@ -84,6 +84,33 @@ npm run homelab:logs
 
 ---
 
+## Music Synchronization & Cloud Storage
+
+Automated CLI tools to download, tag, and stream music via Cloudflare R2:
+
+```bash
+# Download any single song from YouTube, Spotify, SoundCloud, or search query
+npm run music:add "https://www.youtube.com/watch?v=..."
+npm run music:add "https://open.spotify.com/track/..."
+npm run music:add "https://soundcloud.com/artist/track"
+npm run music:add "Artist - Song Name"
+
+# Sync full playlists
+npm run soundcloud:sync "https://soundcloud.com/artist/sets/playlist"
+npm run spotify:sync <playlist_id>
+
+# Slice tracks from YouTube Breakcore Mix
+npm run breakcore:sync
+
+# Optimize all existing audio & embedded covers for fast web streaming
+npm run music:optimize
+
+# Upload local MP3s & covers from public/assets/music to Cloudflare R2
+npm run r2:upload
+```
+
+---
+
 ## Project Structure
 
 ```text

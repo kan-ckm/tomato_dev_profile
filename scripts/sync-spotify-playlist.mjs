@@ -8,9 +8,11 @@ import {
   coversDir,
   getR2Config,
   sanitizeFilename,
-  clearMusicFromCloudAndLocal,
   uploadTracksAndCoversToR2,
   writeMusicConfigFile,
+  readLocalTracks,
+  OPTIMAL_AUDIO_ARGS,
+  embedCoverWithFfmpeg,
 } from "./lib/shared.mjs";
 
 const { s3, bucketName } = getR2Config();
@@ -95,63 +97,27 @@ async function downloadTrack(track) {
     }
   }
 
-  // 2. Tải audio từ YouTube qua yt-dlp dùng execFileSync (An toàn chống Command Injection)
+  // 2. Tải audio tối ưu từ YouTube qua yt-dlp (MP3 VBR 2, 44.1kHz)
   const query = `${track.artist} ${track.name} audio`;
   try {
     execFileSync(
       "yt-dlp",
       [
-        "-x",
-        "--audio-format",
-        "mp3",
-        "--audio-quality",
-        "0",
-        "--no-warnings",
+        ...OPTIMAL_AUDIO_ARGS,
         "-o",
         tempMp3Path,
         `ytsearch1:${query}`,
       ],
-      { stdio: "pipe" }
+      { stdio: ["pipe", "pipe", "ignore"] }
     );
 
-    // 3. Nhúng cover vào MP3 bằng ffmpeg nếu có cover
-    if (fs.existsSync(coverPath)) {
-      try {
-        execFileSync(
-          "ffmpeg",
-          [
-            "-y",
-            "-i",
-            tempMp3Path,
-            "-i",
-            coverPath,
-            "-map",
-            "0:0",
-            "-map",
-            "1:0",
-            "-c",
-            "copy",
-            "-id3v2_version",
-            "3",
-            "-metadata:s:v",
-            "title=Album cover",
-            "-metadata:s:v",
-            "comment=Cover (front)",
-            "-metadata",
-            `title=${track.name}`,
-            "-metadata",
-            `artist=${track.artist}`,
-            mp3Path,
-          ],
-          { stdio: "pipe" }
-        );
-        if (fs.existsSync(tempMp3Path)) fs.unlinkSync(tempMp3Path);
-      } catch {
-        if (fs.existsSync(tempMp3Path)) fs.renameSync(tempMp3Path, mp3Path);
-      }
-    } else if (fs.existsSync(tempMp3Path)) {
-      fs.renameSync(tempMp3Path, mp3Path);
-    }
+    // 3. Nhúng cover và ID3 tags vào MP3 bằng ffmpeg
+    embedCoverWithFfmpeg(
+      tempMp3Path,
+      fs.existsSync(coverPath) ? coverPath : null,
+      mp3Path,
+      { title: track.name, artist: track.artist }
+    );
 
     const stat = fs.statSync(mp3Path);
     console.log(
@@ -167,18 +133,13 @@ async function downloadTrack(track) {
 
 async function main() {
   console.log("========================================================");
-  console.log("   SPOTIFY PLAYLIST SYNC & CLOUD CLEANUP - TOMATODEVS");
+  console.log("   SPOTIFY PLAYLIST SYNC & CLOUD UPDATE - TOMATODEVS");
   console.log("========================================================");
-
-  console.log(
-    "\n🗑️  [1/4] Đang xóa các bài nhạc hiện có trên Cloudflare R2 & local..."
-  );
-  await clearMusicFromCloudAndLocal(s3, bucketName);
 
   const playlistArg = process.argv[2] || DEFAULT_SPOTIFY_PLAYLIST_ID;
   const tracks = await fetchSpotifyPlaylistTracks(playlistArg, 20);
 
-  console.log("\n📥 [3/4] Bắt đầu tải các bản nhạc...");
+  console.log("\n📥 [2/3] Bắt đầu tải các bản nhạc...");
   const successfulTracks = [];
   for (const track of tracks) {
     const ok = await downloadTrack(track);
@@ -187,15 +148,17 @@ async function main() {
 
   if (successfulTracks.length > 0) {
     console.log(
-      `\n☁️  [4/4] Đang upload ${successfulTracks.length} bản nhạc và cover lên Cloudflare R2...`
+      `\n☁️  [3/3] Đang upload ${successfulTracks.length} bản nhạc và cover lên Cloudflare R2...`
     );
     await uploadTracksAndCoversToR2(s3, bucketName, successfulTracks);
-    writeMusicConfigFile(successfulTracks);
+    const allTracks = readLocalTracks();
+    writeMusicConfigFile(allTracks);
   }
 
+  const totalLocal = readLocalTracks().length;
   console.log("\n========================================================");
   console.log(
-    `🎉 HOÀN TẤT: Đã đồng bộ thành công ${successfulTracks.length} bài hát!`
+    `🎉 HOÀN TẤT: Đã tải ${successfulTracks.length} bài hát mới (Tổng: ${totalLocal} bài)!`
   );
   console.log("========================================================\n");
 }

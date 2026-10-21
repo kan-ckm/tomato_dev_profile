@@ -9,9 +9,9 @@ import {
   coversDir,
   getR2Config,
   sanitizeFilename,
-  clearMusicFromCloudAndLocal,
   uploadTracksAndCoversToR2,
   writeMusicConfigFile,
+  readLocalTracks,
 } from "./lib/shared.mjs";
 
 const { s3, bucketName } = getR2Config();
@@ -258,24 +258,20 @@ async function main() {
 
   const mixMp3Path = ensureMixAudioFile();
 
-  console.log(
-    "\n🗑️  [1/4] Xóa các file nhạc & cover hiện tại trên Cloudflare R2 & Local..."
-  );
-  await clearMusicFromCloudAndLocal(s3, bucketName);
-
   const tracks = await processTracks(mixMp3Path);
 
   console.log(
-    `\n☁️  [3/4] Upload ${tracks.length} bài nhạc & ảnh bìa lên Cloudflare R2 '${bucketName}'...`
+    `\n☁️  [2/3] Upload ${tracks.length} bài nhạc & ảnh bìa lên Cloudflare R2 '${bucketName}'...`
   );
   await uploadTracksAndCoversToR2(s3, bucketName, tracks);
 
-  console.log("\n📝 [4/4] Cập nhật src/config/music.config.ts...");
-  writeMusicConfigFile(tracks);
+  console.log("\n📝 [3/3] Cập nhật src/config/music.config.ts...");
+  const allTracks = readLocalTracks();
+  writeMusicConfigFile(allTracks);
 
   console.log("\n========================================================");
   console.log(
-    `🎉 HOÀN TẤT: Đã cập nhật trọn vẹn ${tracks.length} bài breakcore & ảnh bìa!`
+    `🎉 HOÀN TẤT: Đã cập nhật ${tracks.length} bài breakcore vào thư viện (${allTracks.length} bài tổng cộng)!`
   );
   console.log("========================================================\n");
 }
