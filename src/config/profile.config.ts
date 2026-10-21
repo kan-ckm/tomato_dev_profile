@@ -2,15 +2,15 @@ import { ProfileConfig, SocialLink } from "@/types";
 
 export const profileConfig: ProfileConfig = {
   username: "TOMATODEVS",
-  handle: "TomatoDevs · ReDreaming",
+  handle: "TomatoDevs · Redre",
   greeting: "ごきげんよう。",
-  roleBold: "Member of ReDreaming",
-  roleSuffix: " — ReDreaming dev.",
+  roleBold: "Member of Redre",
+  roleSuffix: " — Redre dev.",
   collabText: "DM for collabs: discord",
   discordHandle: "@nxcjcd",
   discordUrl: "https://discord.com/users/907653276701433896",
   avatarSrc: "/assets/avatar/avatar.jpg",
-  fallbackAvatarSrc: "/assets/images/og-image.png",
+  fallbackAvatarSrc: "/assets/avatar/avatar.jpg",
   coverSrc: "/assets/images/background_avartar.jpg",
   statusText: "Online",
   tiktok: {
@@ -29,9 +29,9 @@ export const profileConfig: ProfileConfig = {
   seo: {
     title: "TOMATODEVS — BIO",
     description:
-      "ごきげんよう。 Member of ReDreaming. For any discussion, please contact me via discord @nxcjcd",
+      "ごきげんよう。 Member of Redre. For any discussion, please contact me via discord @nxcjcd",
     siteName: "TomatoDevs Profile",
-    ogImage: "/assets/images/og-image.png",
+    ogImage: "/assets/avatar/avatar.jpg?v=2",
     themeColor: "#050508",
   },
 };
