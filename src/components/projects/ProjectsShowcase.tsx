@@ -26,6 +26,18 @@ export function ProjectsShowcase() {
     [totalProjects]
   );
 
+  const handleScroll = useCallback(() => {
+    if (!gridRef.current || typeof window === "undefined" || window.innerWidth > 768) return;
+    const scrollLeft = gridRef.current.scrollLeft;
+    const cardWidth = window.innerWidth;
+    if (cardWidth > 0) {
+      const newIndex = Math.round(scrollLeft / cardWidth);
+      if (newIndex >= 0 && newIndex < totalProjects && newIndex !== currentIndex) {
+        setCurrentIndex(newIndex);
+      }
+    }
+  }, [totalProjects, currentIndex]);
+
   useEffect(() => {
     let resizeTimer: ReturnType<typeof setTimeout>;
     const handleResize = () => {
@@ -48,13 +60,13 @@ export function ProjectsShowcase() {
   }, [currentIndex]);
 
   return (
-    <div className="projects-container relative z-[15] mx-auto flex min-h-screen max-w-[1200px] flex-col items-center justify-start px-6 pb-[60px] pt-10 max-md:min-h-[100dvh] max-md:px-0 max-md:pb-[100px] max-md:pt-[60px]">
+    <div className="projects-container relative z-[15] mx-auto flex min-h-screen max-w-[1200px] flex-col items-center justify-start px-6 pb-[90px] pt-10 max-md:min-h-[100dvh] max-md:px-0 max-md:pb-[150px] max-md:pt-[60px]">
       <header className="projects-header relative z-[15] mb-10 animate-fade-up text-center max-md:mb-2.5 max-md:px-8">
         <h1 className="mb-2 font-display text-[clamp(2.5rem,8vw,4rem)] font-extrabold text-white drop-shadow-[0_4px_20px_rgba(255,255,255,0.2)] max-md:text-[2.2rem] max-[480px]:text-[1.8rem]">
           PROJECTS
         </h1>
         <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-muted">
-          Software Engineering &amp; Creative Coding
+          Software Engineering &amp; Devops:3
         </p>
       </header>
 
@@ -86,11 +98,12 @@ export function ProjectsShowcase() {
         /* Desktop 4-col / Tablet 2-col Grid / Mobile Horizontal Slider */
         <div
           ref={gridRef}
+          onScroll={handleScroll}
           style={{ animationDelay: "0.2s" }}
           className={cn(
             "projects-grid no-scrollbar relative z-[2] w-full animate-fade-up",
             "grid grid-cols-4 gap-6 max-xl:grid-cols-2 max-xl:gap-5",
-            "max-md:-mt-10 max-md:flex max-md:gap-0 max-md:overflow-x-hidden max-md:py-[60px]"
+            "max-md:-mt-10 max-md:flex max-md:gap-0 max-md:overflow-x-auto max-md:snap-x max-md:snap-mandatory max-md:scroll-smooth max-md:py-[50px]"
           )}
         >
           {projectsConfig.map((project) => (
@@ -99,9 +112,9 @@ export function ProjectsShowcase() {
         </div>
       )}
 
-      {/* Slider Navigation Controls (Mobile <= 768px - chỉ hiển thị khi có dự án) */}
+      {/* Slider Navigation Controls (Mobile <= 768px - Đặt cao hơn thanh menu dưới để không bị che khuất) */}
       {totalProjects > 0 && (
-        <div className="slider-controls fixed bottom-6 left-1/2 z-[9990] flex -translate-x-1/2 items-center justify-center gap-6 md:hidden">
+        <div className="slider-controls fixed bottom-[88px] left-1/2 z-[9990] flex -translate-x-1/2 items-center justify-center gap-3.5 rounded-full border border-white/15 bg-black/75 px-3.5 py-1.5 shadow-[0_12px_30px_rgba(0,0,0,0.6)] backdrop-blur-xl md:hidden">
           <button
             id="project-prev"
             type="button"
@@ -109,12 +122,12 @@ export function ProjectsShowcase() {
             disabled={currentIndex === 0}
             onClick={() => scrollToSlide(currentIndex - 1)}
             className={cn(
-              "slider-btn flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/[0.08] text-white backdrop-blur-md transition-all duration-300 active:scale-90 active:border-accent active:bg-accent/20",
-              currentIndex === 0 && "pointer-events-none opacity-30"
+              "slider-btn flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/10 text-white backdrop-blur-md transition-all duration-200 active:scale-90",
+              currentIndex === 0 && "pointer-events-none opacity-25"
             )}
           >
             <svg
-              className="h-5 w-5 opacity-80"
+              className="h-4 w-4 opacity-90"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -126,7 +139,7 @@ export function ProjectsShowcase() {
             </svg>
           </button>
 
-          <div id="project-dots" className="flex items-center gap-2.5">
+          <div id="project-dots" className="flex items-center gap-2 px-1">
             {projectsConfig.map((p, idx) => (
               <button
                 key={p.id}
@@ -134,10 +147,10 @@ export function ProjectsShowcase() {
                 aria-label={`Go to project ${idx + 1}`}
                 onClick={() => scrollToSlide(idx)}
                 className={cn(
-                  "h-1.5 w-1.5 cursor-pointer rounded-full border-none p-0 transition-all duration-300",
+                  "h-1.5 cursor-pointer rounded-full border-none p-0 transition-all duration-300",
                   idx === currentIndex
-                    ? "scale-[1.4] bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]"
-                    : "bg-white/20"
+                    ? "w-5 bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)]"
+                    : "w-1.5 bg-white/30"
                 )}
               />
             ))}
@@ -150,12 +163,12 @@ export function ProjectsShowcase() {
             disabled={currentIndex === totalProjects - 1}
             onClick={() => scrollToSlide(currentIndex + 1)}
             className={cn(
-              "slider-btn flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/[0.08] text-white backdrop-blur-md transition-all duration-300 active:scale-90 active:border-accent active:bg-accent/20",
-              currentIndex === totalProjects - 1 && "pointer-events-none opacity-30"
+              "slider-btn flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/10 bg-white/10 text-white backdrop-blur-md transition-all duration-200 active:scale-90",
+              currentIndex === totalProjects - 1 && "pointer-events-none opacity-25"
             )}
           >
             <svg
-              className="h-5 w-5 opacity-80"
+              className="h-4 w-4 opacity-90"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"

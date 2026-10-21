@@ -84,8 +84,8 @@ export function ProjectCard({ project }: { project: ProjectItem }) {
         "project-card group relative flex h-full flex-col justify-between overflow-hidden rounded-panel border border-white/[0.08] bg-[#09090d]/80 px-6 py-7 shadow-[0_10px_30px_rgba(0,0,0,0.25)] backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]",
         "before:pointer-events-none before:absolute before:inset-0 before:z-[6] before:bg-gradient-to-br before:from-accent before:to-transparent before:opacity-0 before:transition-opacity before:duration-500",
         "md:hover:-translate-y-3 md:hover:border-white/25 md:hover:shadow-[0_30px_60px_rgba(0,0,0,0.5),0_0_25px_rgba(255,255,255,0.12)] md:hover:before:opacity-[0.05]",
-        "max-md:mx-[16vw] max-md:max-h-[55vh] max-md:min-h-[380px] max-md:w-[68vw] max-md:shrink-0 max-md:px-5 max-md:pb-6 max-md:pt-5",
-        "max-[480px]:mx-[15vw] max-[480px]:min-h-[360px] max-[480px]:w-[70vw] max-[480px]:px-4 max-[480px]:pb-5 max-[480px]:pt-4"
+        "max-md:snap-center max-md:mx-[16vw] max-md:max-h-[55vh] max-md:min-h-[380px] max-md:w-[68vw] max-md:shrink-0 max-md:px-5 max-md:pb-6 max-md:pt-5",
+        "max-[480px]:snap-center max-[480px]:mx-[15vw] max-[480px]:min-h-[360px] max-[480px]:w-[70vw] max-[480px]:px-4 max-[480px]:pb-5 max-[480px]:pt-4"
       )}
     >
       {/* Background Image toàn khối: đỉnh rõ nét, dưới mờ dần */}
