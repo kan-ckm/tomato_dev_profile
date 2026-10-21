@@ -11,6 +11,7 @@ const r2PublicOrigin = (() => {
 })();
 
 const nextConfig = {
+  output: "standalone",
   reactStrictMode: true,
   poweredByHeader: false,
 

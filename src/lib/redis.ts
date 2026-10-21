@@ -302,7 +302,10 @@ export async function checkRedisHealth(): Promise<RedisHealthStatus> {
     };
   }
 
-  const isLocal = url.includes("127.0.0.1") || url.includes("localhost");
+  const isLocal =
+    url.includes("127.0.0.1") ||
+    url.includes("localhost") ||
+    url.includes("redis-http");
   const mode = isLocal ? "docker-local" : "upstash-cloud";
 
   const start = performance.now();
