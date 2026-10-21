@@ -23,7 +23,11 @@
     "homelab:tunnel": "bash scripts/homelab/run.sh set-tunnel",
     "homelab:status": "bash scripts/homelab/run.sh status",
     "homelab:logs": "bash scripts/homelab/run.sh logs",
-    "homelab:down": "bash scripts/homelab/run.sh down"
+    "homelab:down": "bash scripts/homelab/run.sh down",
+    "test:load": "bash scripts/load-test/run-load-test.sh",
+    "test:load:quick": "node scripts/load-test/autocannon-quick.mjs",
+    "test:load:smoke": "bash scripts/load-test/run-load-test.sh http://localhost:3000 smoke",
+    "test:load:stress": "bash scripts/load-test/run-load-test.sh http://localhost:3000 stress"
   },
   "repository": {
     "type": "git",
