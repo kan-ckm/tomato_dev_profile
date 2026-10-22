@@ -36,6 +36,7 @@ import {
   OPTIMAL_AUDIO_ARGS,
   embedCoverWithFfmpeg,
   checkPlaylistLimit,
+  syncTrackToDatabase,
 } from "./lib/shared.mjs";
 
 const { s3, bucketName } = getR2Config();
@@ -394,7 +395,10 @@ async function main() {
   console.log(`\n☁️  [3/3] Upload lên Cloudflare R2 '${bucketName || "local"}'...`);
   await uploadTracksAndCoversToR2(s3, bucketName, [newTrack]);
 
-  // 5. Cập nhật file cấu hình music.config.ts và làm mới Redis Cache
+  // 5. Đồng bộ vào Neon PostgreSQL Database (Single Source of Truth)
+  await syncTrackToDatabase(newTrack);
+
+  // 6. Cập nhật file cấu hình music.config.ts và làm mới Redis Cache
   const allLocalTracks = readLocalTracks();
   writeMusicConfigFile(allLocalTracks);
   await invalidateRedisMusicCache();

@@ -10,6 +10,7 @@ import {
   sanitizeFilename,
   uploadTracksAndCoversToR2,
   writeMusicConfigFile,
+  syncTrackToDatabase,
   readLocalTracks,
   OPTIMAL_AUDIO_ARGS,
   embedCoverWithFfmpeg,
@@ -164,6 +165,12 @@ async function main() {
       `\n☁️  [3/3] Đang upload ${successfulTracks.length} bản nhạc và cover lên Cloudflare R2...`
     );
     await uploadTracksAndCoversToR2(s3, bucketName, successfulTracks);
+
+    // Đồng bộ vào Neon PostgreSQL Database
+    for (const t of successfulTracks) {
+      await syncTrackToDatabase(t);
+    }
+
     const allTracks = readLocalTracks();
     writeMusicConfigFile(allTracks);
   }

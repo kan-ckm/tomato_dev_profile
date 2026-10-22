@@ -8,6 +8,7 @@ import {
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import { Redis } from "@upstash/redis";
+import { neon } from "@neondatabase/serverless";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -162,16 +163,73 @@ export async function clearMusicFromCloudAndLocal() {
 }
 
 export async function invalidateRedisMusicCache() {
-  const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
-  if (url && token && !url.includes("your-redis-instance")) {
-    try {
-      const redis = new Redis({ url, token });
-      await redis.del("tomato:r2:music_playlist");
-      console.log("   ✅ Đã làm mới Redis cache (tomato:r2:music_playlist).");
-    } catch (e) {
-      console.warn("   ⚠️ Lỗi xóa Redis cache:", e.message);
+  loadProjectEnv();
+  const endpoints = [
+    { url: process.env.UPSTASH_REDIS_REST_URL?.trim(), token: process.env.UPSTASH_REDIS_REST_TOKEN?.trim() },
+    { url: "http://100.119.185.5:8079", token: "tomato_local_redis_secret_token" },
+    { url: "http://127.0.0.1:8079", token: "tomato_local_redis_secret_token" },
+  ];
+
+  for (const ep of endpoints) {
+    if (ep.url && ep.token && !ep.url.includes("your-redis-instance")) {
+      try {
+        const redis = new Redis({ url: ep.url, token: ep.token });
+        await redis.del("tomato:r2:music_playlist", "tomato:r2:music_refresh_lock");
+        console.log(`   ✅ Đã làm mới Redis cache (${ep.url}).`);
+      } catch {
+        // ignore
+      }
     }
+  }
+}
+
+/**
+ * Đồng bộ trực tiếp bài hát mới vào Neon PostgreSQL Database (Single Source of Truth)
+ */
+export async function syncTrackToDatabase(track) {
+  loadProjectEnv();
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) return false;
+
+  try {
+    const sql = neon(dbUrl);
+    const r2Key = `music/${track.file}`;
+    const r2Base = process.env.R2_PUBLIC_URL?.replace(/\/+$/, "") || "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev";
+    const audioUrl = `${r2Base}/${r2Key}`;
+    const baseName = track.baseName || track.file.replace(/\.mp3$/i, "").trim();
+    const coverUrl = `${r2Base}/music/covers/${encodeURIComponent(baseName)}.jpg`;
+
+    // Lấy sort_order cao nhất hiện tại
+    const maxOrderRow = await sql`SELECT MAX(sort_order) as max_order FROM music_tracks`;
+    const nextSortOrder = (Number(maxOrderRow[0]?.max_order) || 0) + 1;
+    const trackId = `track_${Math.random().toString(36).substring(2, 9)}_${Date.now().toString(36)}`;
+
+    await sql`
+      INSERT INTO music_tracks (
+        id, title, artist, r2_key, audio_url, cover_url, sort_order, is_active, metadata, created_at, updated_at
+      ) VALUES (
+        ${trackId},
+        ${track.name || track.title || baseName},
+        ${track.artist || "Unknown"},
+        ${r2Key},
+        ${audioUrl},
+        ${coverUrl},
+        ${nextSortOrder},
+        true,
+        ${JSON.stringify({ source: "script_automation", base_name: baseName })},
+        NOW(),
+        NOW()
+      )
+      ON CONFLICT (r2_key) DO UPDATE
+      SET audio_url = EXCLUDED.audio_url,
+          cover_url = EXCLUDED.cover_url,
+          updated_at = NOW()
+    `;
+    console.log(`   🗄️  [Neon DB] Đã đồng bộ bài hát vào SQL Database: "${track.name || baseName}" (sort: #${nextSortOrder})`);
+    return true;
+  } catch (err) {
+    console.warn(`   ⚠️  [Neon DB] Không thể đồng bộ bài hát vào SQL:`, err.message);
+    return false;
   }
 }
 
@@ -253,6 +311,7 @@ export function writeMusicConfigFile(tracks, preserveOrder = false) {
   if (!tracks || tracks.length === 0) return;
   const configPath = path.join(rootDir, "src", "config", "music.config.ts");
   const defaultTrack = tracks[0];
+  const r2Base = process.env.R2_PUBLIC_URL?.replace(/\/+$/, "") || "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev";
 
   let sortedTracks = [...tracks];
   if (!preserveOrder) {
@@ -269,9 +328,13 @@ export function writeMusicConfigFile(tracks, preserveOrder = false) {
   }
 
   const playlistItems = sortedTracks.map((t) => {
-    const coverUrl =
-      t.cover || `/assets/music/covers/${encodeURIComponent(t.baseName)}.jpg`;
-    return `  {\n    name: ${JSON.stringify(t.name)},\n    artist: ${JSON.stringify(t.artist)},\n    file: ${JSON.stringify(t.file)},\n    cover: ${JSON.stringify(coverUrl)},\n  },`;
+    const baseName = t.baseName || t.file.replace(/\.mp3$/i, "").trim();
+    const audioUrl = t.url || `${r2Base}/music/${encodeURIComponent(t.file)}`;
+    const coverUrl = t.cover && t.cover.startsWith("http")
+      ? t.cover
+      : `${r2Base}/music/covers/${encodeURIComponent(baseName)}.jpg`;
+
+    return `  {\n    name: ${JSON.stringify(t.name)},\n    artist: ${JSON.stringify(t.artist)},\n    file: ${JSON.stringify(t.file)},\n    url: ${JSON.stringify(audioUrl)},\n    cover: ${JSON.stringify(coverUrl)},\n  },`;
   });
 
   const content = `import { MusicTrack } from "@/types";
@@ -280,8 +343,8 @@ export const DEFAULT_TRACK_FILE = ${JSON.stringify(defaultTrack.file)};
 export const DEFAULT_VOLUME = 0.5;
 
 /**
- * Danh sách nhạc dự phòng (fallback) khi API /api/music chưa phản hồi.
- * Khi chạy thực tế, API /api/music sẽ tự động đọc từ Cloudflare R2 hoặc quét \`public/assets/music\`.
+ * Danh sách nhạc dự phòng (fallback) tự động đồng bộ từ Cloudflare R2 CDN & Neon SQL Database.
+ * Không phụ thuộc vào file MP3 nội bộ trên máy chủ.
  */
 export const fallbackPlaylist: MusicTrack[] = [
 ${playlistItems.join("\n")}
@@ -289,7 +352,7 @@ ${playlistItems.join("\n")}
 `;
 
   fs.writeFileSync(configPath, content, "utf-8");
-  console.log("   ✅ Đã cập nhật src/config/music.config.ts.");
+  console.log("   ✅ Đã cập nhật src/config/music.config.ts (Full Cloud R2 CDN links).");
 }
 
 export function readLocalTracks() {
