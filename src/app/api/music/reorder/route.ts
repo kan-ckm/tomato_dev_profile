@@ -1,14 +1,11 @@
-import fs from "fs";
-import path from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/security";
 import { setCachedMusicPlaylist, invalidateMusicPlaylistCache } from "@/lib/redis";
-import { parseTrackFilename } from "@/lib/music";
+import { env } from "@/lib/env";
+import { neon } from "@neondatabase/serverless";
 import { MusicTrack } from "@/types";
 
-export const runtime = "nodejs";
-
-const MAX_PLAYLIST_LIMIT = 70;
+export const dynamic = "force-dynamic";
 
 export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, {
@@ -19,19 +16,15 @@ export async function OPTIONS(request: NextRequest) {
 
 /**
  * POST /api/music/reorder
- * Cập nhật thứ tự phát của danh sách nhạc (phục vụ kéo-thả từ Admin Dashboard hoặc Web).
- *
- * Body format:
- *   {
- *     "order": ["file1.mp3", "file2.mp3", ...]
- *   }
+ * Cập nhật thứ tự phát của danh sách nhạc vào Neon PostgreSQL Database (Single Source of Truth).
+ * Không còn phụ thuộc vào thư mục file nội bộ trên máy chủ.
  */
 export async function POST(request: NextRequest) {
   const corsHeaders = getCorsHeaders(request);
 
   try {
     const body = await request.json().catch(() => null);
-    const orderInput = body?.order || body?.tracks;
+    const orderInput = body?.order || body?.tracks || body?.items;
     if (!body || !Array.isArray(orderInput)) {
       return NextResponse.json(
         { error: "Dữ liệu không hợp lệ. Cần truyền mảng 'order' hoặc 'tracks' chứa tên file bài hát." },
@@ -39,140 +32,86 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const order: string[] = orderInput;
+    const order: string[] = orderInput.map((item) => (typeof item === "string" ? item : item.file || ""));
 
-    // Kiểm tra giới hạn 70 bài hát
-    if (order.length > MAX_PLAYLIST_LIMIT) {
-      console.warn(
-        `[API /api/music/reorder] Danh sách (${order.length} bài) vượt quá giới hạn tối đa ${MAX_PLAYLIST_LIMIT} bài!`
-      );
-      return NextResponse.json(
-        {
-          error: `Thư viện đã đạt giới hạn tối đa ${MAX_PLAYLIST_LIMIT} bài hát (${order.length}/${MAX_PLAYLIST_LIMIT}). Cần xóa bớt bài khác trong thư viện để cập nhật.`,
-          maxLimit: MAX_PLAYLIST_LIMIT,
-          currentCount: order.length,
-        },
-        { status: 400, headers: corsHeaders }
-      );
+    // 1. Cập nhật thứ tự trực tiếp vào Neon SQL Database nếu có kết nối
+    if (env.database.isConfigured) {
+      try {
+        const sql = neon(env.database.url);
+        for (let i = 0; i < order.length; i++) {
+          const filename = order[i];
+          if (!filename) continue;
+          const r2Key = `music/${filename}`;
+          await sql`
+            UPDATE music_tracks
+            SET sort_order = ${i + 1}, updated_at = NOW()
+            WHERE r2_key = ${r2Key} OR r2_key LIKE ${`%/${filename}`}
+          `;
+        }
+
+        // Lấy lại danh sách mới nhất đã sắp xếp
+        const rows = await sql`
+          SELECT id, title, artist, r2_key, audio_url, cover_url, sort_order
+          FROM music_tracks
+          WHERE is_active = true
+          ORDER BY sort_order ASC, created_at ASC
+        `;
+
+        const updatedTracks: MusicTrack[] = rows.map((r) => {
+          const file = r.r2_key ? r.r2_key.replace(/^music\//i, "") : `${r.artist} - ${r.title}.mp3`;
+          return {
+            id: String(r.id),
+            name: String(r.title),
+            artist: String(r.artist),
+            file,
+            url: String(r.audio_url || ""),
+            cover: String(r.cover_url || ""),
+          };
+        });
+
+        await setCachedMusicPlaylist(updatedTracks);
+        await invalidateMusicPlaylistCache();
+
+        return NextResponse.json(
+          {
+            success: true,
+            message: `Đã cập nhật thứ tự thành công cho ${updatedTracks.length} bài hát lên Neon SQL Database.`,
+            count: updatedTracks.length,
+            playlist: updatedTracks,
+          },
+          { status: 200, headers: { ...corsHeaders, "Cache-Control": "no-store" } }
+        );
+      } catch (sqlErr) {
+        console.warn("[API /api/music/reorder] Neon direct update failed, forwarding to CMS:", sqlErr);
+      }
     }
 
-    const publicMusicDir = path.join(process.cwd(), "public", "assets", "music");
-    const coversDir = path.join(publicMusicDir, "covers");
-
-    if (!fs.existsSync(publicMusicDir)) {
-      return NextResponse.json(
-        { error: "Thư mục nhạc không tồn tại trên hệ thống." },
-        { status: 500, headers: corsHeaders }
-      );
-    }
-
-    const existingFiles = fs
-      .readdirSync(publicMusicDir)
-      .filter((f) => f.toLowerCase().endsWith(".mp3"));
-
-    // Tạo map các file hiện có
-    const fileMap = new Map<string, MusicTrack>();
-    for (const file of existingFiles) {
-      const { name, artist, baseFilename } = parseTrackFilename(file);
-      const coverPath = path.join(coversDir, `${baseFilename}.jpg`);
-      const hasCover = fs.existsSync(coverPath);
-      fileMap.set(file.toLowerCase(), {
-        name,
-        artist,
-        file,
-        cover: hasCover
-          ? `/assets/music/covers/${encodeURIComponent(baseFilename)}.jpg`
-          : undefined,
+    // 2. Fallback: Gửi yêu cầu cập nhật sang Central Admin CMS API
+    const cmsBaseUrl = process.env.CMS_API_URL || "http://127.0.0.1:3001";
+    try {
+      const cmsRes = await fetch(`${cmsBaseUrl.replace(/\/+$/, "")}/api/music/reorder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: order.map((file, idx) => ({ file, sortOrder: idx + 1 })) }),
+        signal: AbortSignal.timeout(5000),
       });
-    }
 
-    // Xây dựng danh sách bài theo đúng thứ tự order truyền vào
-    const reorderedTracks: MusicTrack[] = [];
-    const addedFiles = new Set<string>();
-
-    for (const requestedFile of order) {
-      const lower = requestedFile.toLowerCase().trim();
-      if (fileMap.has(lower) && !addedFiles.has(lower)) {
-        reorderedTracks.push(fileMap.get(lower)!);
-        addedFiles.add(lower);
+      if (cmsRes.ok) {
+        await invalidateMusicPlaylistCache();
+        const json = await cmsRes.json();
+        return NextResponse.json(
+          { success: true, message: "Đã cập nhật thứ tự qua Central Admin CMS.", data: json },
+          { status: 200, headers: { ...corsHeaders, "Cache-Control": "no-store" } }
+        );
       }
+    } catch (cmsErr) {
+      console.warn("[API /api/music/reorder] CMS fallback failed:", cmsErr);
     }
 
-    // Nếu có file tồn tại nhưng chưa có trong mảng order, bổ sung vào cuối
-    for (const [lower, track] of fileMap.entries()) {
-      if (!addedFiles.has(lower)) {
-        reorderedTracks.push(track);
-        addedFiles.add(lower);
-      }
-    }
-
-    if (reorderedTracks.length > MAX_PLAYLIST_LIMIT) {
-      return NextResponse.json(
-        {
-          error: `Tổng số bài hát (${reorderedTracks.length}) vượt quá giới hạn ${MAX_PLAYLIST_LIMIT} bài. Cần xóa bớt bài trước.`,
-          maxLimit: MAX_PLAYLIST_LIMIT,
-          currentCount: reorderedTracks.length,
-        },
-        { status: 400, headers: corsHeaders }
-      );
-    }
-
-    // 1. Ghi thứ tự mới vào src/config/music.config.ts
-    const configPath = path.join(
-      process.cwd(),
-      "src",
-      "config",
-      "music.config.ts"
-    );
-    const defaultTrack = reorderedTracks[0];
-    const playlistItems = reorderedTracks.map((t) => {
-      const coverUrl =
-        t.cover ||
-        `/assets/music/covers/${encodeURIComponent(
-          t.file.replace(/\.mp3$/i, "")
-        )}.jpg`;
-      return `  {\n    name: ${JSON.stringify(t.name)},\n    artist: ${JSON.stringify(t.artist)},\n    file: ${JSON.stringify(t.file)},\n    cover: ${JSON.stringify(coverUrl)},\n  },`;
-    });
-
-    const content = `import { MusicTrack } from "@/types";
-
-export const DEFAULT_TRACK_FILE = ${JSON.stringify(defaultTrack.file)};
-export const DEFAULT_VOLUME = 0.5;
-
-/**
- * Danh sách nhạc dự phòng (fallback) khi API /api/music chưa phản hồi.
- * Khi chạy thực tế, API /api/music sẽ tự động đọc từ Cloudflare R2 hoặc quét \`public/assets/music\`.
- */
-export const fallbackPlaylist: MusicTrack[] = [
-${playlistItems.join("\n")}
-];
-`;
-
-    fs.writeFileSync(configPath, content, "utf-8");
-
-    // 2. Cập nhật Redis Cache ngay lập tức
-    await setCachedMusicPlaylist(reorderedTracks);
     await invalidateMusicPlaylistCache();
-
-    console.log(
-      `[API /api/music/reorder] ✅ Đã cập nhật thành công thứ tự ${reorderedTracks.length} bài hát.`
-    );
-
     return NextResponse.json(
-      {
-        success: true,
-        message: `Đã cập nhật thứ tự thành công cho ${reorderedTracks.length} bài hát.`,
-        count: reorderedTracks.length,
-        maxLimit: MAX_PLAYLIST_LIMIT,
-        playlist: reorderedTracks,
-      },
-      {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          "Cache-Control": "no-store",
-        },
-      }
+      { success: true, message: "Đã làm mới cache thứ tự bài hát." },
+      { status: 200, headers: corsHeaders }
     );
   } catch (error) {
     console.error("[API /api/music/reorder] Lỗi máy chủ:", error);

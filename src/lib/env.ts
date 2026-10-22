@@ -93,4 +93,14 @@ export const env = {
   get tiktokUsername(): string {
     return process.env.TIKTOK_USERNAME?.replace(/^@/, "").trim() || "";
   },
+
+  /** Cấu hình Central Neon PostgreSQL Database */
+  database: {
+    get url(): string {
+      return process.env.DATABASE_URL?.trim() || "";
+    },
+    get isConfigured(): boolean {
+      return Boolean(this.url && !this.url.includes("your-database-url"));
+    },
+  },
 } as const;

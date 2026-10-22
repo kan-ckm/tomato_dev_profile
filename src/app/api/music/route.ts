@@ -1,5 +1,3 @@
-import fs from "fs";
-import path from "path";
 import { NextRequest, NextResponse } from "next/server";
 import { fallbackPlaylist } from "@/config/music.config";
 import {
@@ -15,7 +13,10 @@ import {
   setCachedMusicPlaylist,
 } from "@/lib/redis";
 import { parseTrackFilename, sortTracksByConfigOrder } from "@/lib/music";
+import { getMusicPlaylistFromDatabase, getMusicPlaylistFromCms } from "@/lib/cms";
 import { MusicTrack } from "@/types";
+
+export const dynamic = "force-dynamic";
 
 export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, {
@@ -49,33 +50,85 @@ export async function GET(request: NextRequest) {
 
   let forceRefresh = request.nextUrl.searchParams.get("refresh") === "1";
 
-  // Bảo vệ nghiêm ngặt cờ ?refresh=1 để tránh kẻ xấu spam S3 ListObjectsV2 (Class A Operation)
+  // Bảo vệ cờ ?refresh=1 chống spam
   if (forceRefresh) {
-    const refreshLimit = checkRateLimit(request, 2, 60_000, "api-music-refresh");
+    const refreshLimit = checkRateLimit(request, 4, 60_000, "api-music-refresh");
     const hasLock = refreshLimit.allowed
-      ? await acquireDistributedLock(REDIS_KEYS.MUSIC_LOCK, 15)
+      ? await acquireDistributedLock(REDIS_KEYS.MUSIC_LOCK, 10)
       : false;
     if (!hasLock) {
       forceRefresh = false;
     }
   }
 
-  // 1. Kiểm tra Redis Cache trước tiên (giảm 99.9% số lần gọi S3 ListObjectsV2 lên Cloudflare R2)
-  if (!forceRefresh) {
-    const cachedTracks = await getCachedMusicPlaylist();
-    if (cachedTracks && cachedTracks.length > 0) {
-      return NextResponse.json(cachedTracks, {
+  // ============================================================================
+  // 1. NGUỒN CHÍNH (PRIMARY): Truy vấn Neon PostgreSQL Database trực tiếp
+  // ============================================================================
+  try {
+    const dbTracks = await getMusicPlaylistFromDatabase();
+    if (dbTracks && dbTracks.length > 0) {
+      // Lưu làm bản sao dự phòng vào Redis
+      await setCachedMusicPlaylist(dbTracks);
+
+      return NextResponse.json(dbTracks, {
         status: 200,
         headers: {
           ...corsHeaders,
-          "X-Cache": "HIT",
-          "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
+          "X-Source": "Neon-SQL-Direct",
+          "Cache-Control": "public, max-age=0, s-maxage=10, stale-while-revalidate=30",
         },
       });
     }
+  } catch (dbErr) {
+    console.warn("[API /api/music] Direct Neon DB query failed, attempting CMS fallback:", dbErr);
   }
 
-  // 2. Kiểm tra Cloudflare R2 Storage (nếu chưa có trong Redis Cache)
+  // ============================================================================
+  // 2. NGUỒN PHỤ (SECONDARY): Central Admin CMS API (Headless Endpoint)
+  // ============================================================================
+  try {
+    const cmsTracks = await getMusicPlaylistFromCms();
+    if (cmsTracks && cmsTracks.length > 0) {
+      // Lưu làm bản sao dự phòng vào Redis
+      await setCachedMusicPlaylist(cmsTracks);
+
+      return NextResponse.json(cmsTracks, {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "X-Source": "Neon-SQL-CMS",
+          "Cache-Control": "public, max-age=0, s-maxage=10, stale-while-revalidate=30",
+        },
+      });
+    }
+  } catch (cmsErr) {
+    console.warn("[API /api/music] Central CMS query failed, attempting offline fallbacks:", cmsErr);
+  }
+
+  // ============================================================================
+  // 3. DỰ PHÒNG KHI MẤT MẠNG (OFFLINE FALLBACKS): Redis -> R2 -> Local Files
+  // ============================================================================
+  // Fallback A: Redis Cache
+  if (!forceRefresh) {
+    try {
+      const cachedTracks = await getCachedMusicPlaylist();
+      if (cachedTracks && cachedTracks.length > 0) {
+        return NextResponse.json(cachedTracks, {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            "X-Cache": "HIT",
+            "X-Source": "Redis-Offline-Fallback",
+            "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
+          },
+        });
+      }
+    } catch (redisErr) {
+      console.warn("[API /api/music] Redis fallback failed:", redisErr);
+    }
+  }
+
+  // Fallback B: Quét Cloudflare R2 Bucket
   if (isR2Configured()) {
     try {
       let r2Objects = await listR2Objects("music/");
@@ -106,29 +159,26 @@ export async function GET(request: NextRequest) {
         });
 
         const sortedR2Tracks = sortTracksByConfigOrder(rawTracks);
-
-        // Lưu danh sách nhạc R2 vào Redis Cache (10 phút)
         await setCachedMusicPlaylist(sortedR2Tracks);
 
         return NextResponse.json(sortedR2Tracks, {
           status: 200,
           headers: {
             ...corsHeaders,
-            "X-Cache": "MISS",
+            "X-Source": "Cloudflare-R2-Fallback",
             "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
           },
         });
       }
     } catch (r2Error) {
-      console.warn(
-        "[API /api/music] Cloudflare R2 query failed, falling back to local files:",
-        r2Error
-      );
+      console.warn("[API /api/music] Cloudflare R2 query failed:", r2Error);
     }
   }
 
-  // 3. Quét thư mục tĩnh cục bộ public/assets/music nếu chưa có R2
+  // Fallback C: Quét thư mục tĩnh cục bộ public/assets/music nếu có
   try {
+    const fs = await import("fs");
+    const path = await import("path");
     const publicMusicDir = path.join(process.cwd(), "public", "assets", "music");
     const legacyMusicDir = path.join(process.cwd(), "assets", "music");
 
@@ -138,62 +188,48 @@ export async function GET(request: NextRequest) {
       ? legacyMusicDir
       : null;
 
-    if (!musicDir) {
-      return NextResponse.json(fallbackPlaylist, {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
-        },
-      });
+    if (musicDir) {
+      const files = fs.readdirSync(musicDir);
+      const musicFiles: MusicTrack[] = files
+        .filter(isSafeMp3Filename)
+        .map((file) => {
+          const { name, artist, baseFilename } = parseTrackFilename(file);
+          const localCoverPath = path.join(publicMusicDir, "covers", `${baseFilename}.jpg`);
+          const cover = fs.existsSync(localCoverPath)
+            ? `/assets/music/covers/${encodeURIComponent(baseFilename)}.jpg`
+            : undefined;
+
+          return {
+            name,
+            artist,
+            file,
+            cover,
+          };
+        });
+
+      if (musicFiles.length > 0) {
+        const sortedLocalTracks = sortTracksByConfigOrder(musicFiles);
+        return NextResponse.json(sortedLocalTracks, {
+          status: 200,
+          headers: {
+            ...corsHeaders,
+            "X-Source": "Local-Disk-Fallback",
+            "Cache-Control": "public, s-maxage=3600",
+          },
+        });
+      }
     }
-
-    const files = fs.readdirSync(musicDir);
-
-    const musicFiles: MusicTrack[] = files
-      .filter(isSafeMp3Filename)
-      .map((file) => {
-        const { name, artist, baseFilename } = parseTrackFilename(file);
-        const localCoverPath = path.join(
-          publicMusicDir,
-          "covers",
-          `${baseFilename}.jpg`
-        );
-        const cover = fs.existsSync(localCoverPath)
-          ? `/assets/music/covers/${encodeURIComponent(baseFilename)}.jpg`
-          : undefined;
-
-        return {
-          name,
-          artist,
-          file,
-          cover,
-        };
-      });
-
-    const sortedLocalTracks =
-      musicFiles.length > 0
-        ? sortTracksByConfigOrder(musicFiles)
-        : fallbackPlaylist;
-
-    await setCachedMusicPlaylist(sortedLocalTracks);
-
-    return NextResponse.json(sortedLocalTracks, {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        "X-Cache": "LOCAL",
-        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
-      },
-    });
-  } catch (error) {
-    console.error("[API /api/music] Internal error:", error);
-    return NextResponse.json(fallbackPlaylist, {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        "Cache-Control": "public, s-maxage=600",
-      },
-    });
+  } catch {
+    // ignore
   }
+
+  // Fallback D: fallbackPlaylist chuẩn trong config
+  return NextResponse.json(fallbackPlaylist, {
+    status: 200,
+    headers: {
+      ...corsHeaders,
+      "X-Source": "Static-Config-Fallback",
+      "Cache-Control": "public, s-maxage=600",
+    },
+  });
 }
