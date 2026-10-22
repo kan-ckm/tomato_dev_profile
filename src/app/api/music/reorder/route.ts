@@ -72,6 +72,34 @@ export async function POST(request: NextRequest) {
         await setCachedMusicPlaylist(updatedTracks);
         await invalidateMusicPlaylistCache();
 
+        // Đồng bộ file fallback music.config.ts ngay lập tức
+        try {
+          const fs = await import("fs");
+          const path = await import("path");
+          const configPath = path.join(process.cwd(), "src", "config", "music.config.ts");
+          if (fs.existsSync(configPath) && updatedTracks.length > 0) {
+            const playlistItems = updatedTracks.map((t) => {
+              return `  {\n    name: ${JSON.stringify(t.name)},\n    artist: ${JSON.stringify(t.artist)},\n    file: ${JSON.stringify(t.file)},\n    url: ${JSON.stringify(t.url || "")},\n    cover: ${JSON.stringify(t.cover || "")},\n  },`;
+            });
+            const content = `import { MusicTrack } from "@/types";
+
+export const DEFAULT_TRACK_FILE = ${JSON.stringify(updatedTracks[0].file)};
+export const DEFAULT_VOLUME = 0.5;
+
+/**
+ * Danh sách nhạc dự phòng (fallback) tự động đồng bộ từ Neon PostgreSQL Database & Cloudflare R2 CDN.
+ * Không phụ thuộc vào file MP3 nội bộ trên máy chủ.
+ */
+export const fallbackPlaylist: MusicTrack[] = [
+${playlistItems.join("\n")}
+];
+`;
+            fs.writeFileSync(configPath, content, "utf-8");
+          }
+        } catch {
+          // ignore
+        }
+
         return NextResponse.json(
           {
             success: true,

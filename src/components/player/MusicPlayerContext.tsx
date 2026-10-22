@@ -63,10 +63,8 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
   const isManuallyPausedRef = useRef<boolean>(false);
 
   const [playlist, setPlaylist] = useState<MusicTrack[]>(fallbackPlaylist);
-  const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(() => {
-    const idx = fallbackPlaylist.findIndex((t) => t.file === DEFAULT_TRACK_FILE);
-    return idx !== -1 ? idx : 0;
-  });
+  const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(0);
+  const currentTrackIndexRef = useRef<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
@@ -133,23 +131,18 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       audioRef.current.volume = validVol;
     }
 
-    // Khởi tạo ngay bài hát mặc định để audio.src không bao giờ bị rỗng
-    const initialTrack = fallbackPlaylist.find((t) => t.file === DEFAULT_TRACK_FILE) || fallbackPlaylist[0];
+    // Khởi tạo ngay bài hát đầu tiên ở hàng đầu để audio.src không bao giờ bị rỗng
+    const initialTrack = fallbackPlaylist[0];
     if (audioRef.current && initialTrack && !audioRef.current.src) {
       audioRef.current.src = resolveTrackAudioSrc(initialTrack);
     }
 
     const initTrackFromStorage = (tracks: MusicTrack[]) => {
-      // "through the light" luôn luôn được ưu tiên phát trước khi tải trang
-      const throughTheLightIdx = tracks.findIndex(
-        (t) =>
-          t.file === DEFAULT_TRACK_FILE ||
-          t.name.toLowerCase().includes("through the light") ||
-          t.file.toLowerCase().includes("through the light")
-      );
-      const resolvedIndex = throughTheLightIdx !== -1 ? throughTheLightIdx : 0;
+      // Bài hát ở hàng đầu tiên (index 0 / sort_order 1) luôn luôn là bài phát mặc định
+      const resolvedIndex = 0;
 
       setCurrentTrackIndex(resolvedIndex);
+      currentTrackIndexRef.current = resolvedIndex;
       const track = tracks[resolvedIndex];
       if (track && audioRef.current) {
         const targetSrc = resolveTrackAudioSrc(track);
@@ -211,8 +204,39 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
         initTrackFromStorage(orderedFallback);
       });
 
+    // Tự động làm mới danh sách nhạc theo thời gian thực khi người dùng quay lại tab trình duyệt
+    const refreshPlaylistOnFocus = () => {
+      fetch("/api/music", { cache: "no-store" })
+        .then((res) => res.json())
+        .then((data) => {
+          if (!isMounted) return;
+          if (Array.isArray(data) && data.length > 0) {
+            setPlaylist((prevPlaylist) => {
+              const currentPlaying = prevPlaylist[currentTrackIndexRef.current];
+              if (currentPlaying) {
+                const newIdx = data.findIndex((t: MusicTrack) => t.file === currentPlaying.file);
+                if (newIdx !== -1) {
+                  setCurrentTrackIndex(newIdx);
+                  currentTrackIndexRef.current = newIdx;
+                }
+              }
+              return data;
+            });
+          }
+        })
+        .catch(() => {});
+    };
+
+    window.addEventListener("focus", refreshPlaylistOnFocus);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") refreshPlaylistOnFocus();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
     return () => {
       isMounted = false;
+      window.removeEventListener("focus", refreshPlaylistOnFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, []);
 

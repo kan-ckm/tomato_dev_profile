@@ -77,7 +77,7 @@ function extractTracksMetadata(videoUrl) {
   try {
     const rawJson = execFileSync(
       "yt-dlp",
-      ["--dump-json", videoUrl],
+      ["--js-runtimes", "node", "--dump-json", videoUrl],
       { encoding: "utf-8", stdio: ["pipe", "pipe", "ignore"], timeout: 30000 }
     );
     const info = JSON.parse(rawJson);
@@ -158,6 +158,8 @@ function ensureMixAudioFile(sourceUrl) {
     execFileSync(
       "yt-dlp",
       [
+        "--js-runtimes",
+        "node",
         "-x",
         "--audio-format",
         "mp3",

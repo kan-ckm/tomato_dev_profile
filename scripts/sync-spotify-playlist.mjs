@@ -106,18 +106,40 @@ async function downloadTrack(track) {
   }
 
   // 2. Tải audio tối ưu từ YouTube qua yt-dlp (MP3 VBR 2, 44.1kHz)
-  const query = `${track.artist} ${track.name} audio`;
-  try {
-    execFileSync(
-      "yt-dlp",
-      [
-        ...OPTIMAL_AUDIO_ARGS,
-        "-o",
-        tempMp3Path,
-        `ytsearch1:${query}`,
-      ],
-      { stdio: ["pipe", "pipe", "ignore"] }
-    );
+  const candidateQueries = [
+    `ytsearch1:${track.artist} ${track.name} audio`,
+    `ytsearch1:${track.name} ${track.artist}`,
+    `ytsearch1:${track.name} audio`,
+  ];
+  let audioDownloaded = false;
+  let lastError = null;
+
+  for (const q of candidateQueries) {
+    try {
+      execFileSync(
+        "yt-dlp",
+        [
+          ...OPTIMAL_AUDIO_ARGS,
+          "-o",
+          tempMp3Path,
+          q,
+        ],
+        { stdio: ["pipe", "pipe", "ignore"] }
+      );
+      if (fs.existsSync(tempMp3Path) && fs.statSync(tempMp3Path).size > 1000) {
+        audioDownloaded = true;
+        break;
+      }
+    } catch (err) {
+      lastError = err;
+      if (fs.existsSync(tempMp3Path)) fs.unlinkSync(tempMp3Path);
+    }
+  }
+
+  if (!audioDownloaded) {
+    console.error(`   ❌ Lỗi tải audio cho "${track.baseName}":`, lastError ? lastError.message : "Thất bại");
+    return false;
+  }
 
     // 3. Nhúng cover và ID3 tags vào MP3 bằng ffmpeg
     embedCoverWithFfmpeg(

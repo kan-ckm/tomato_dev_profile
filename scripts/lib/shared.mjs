@@ -82,6 +82,8 @@ export function sanitizeFilename(name) {
  * - Giảm 40-50% dung lượng so với 320kbps mà không suy hao chất lượng nghe được.
  */
 export const OPTIMAL_AUDIO_ARGS = [
+  "--js-runtimes",
+  "node",
   "-x",
   "--audio-format",
   "mp3",
@@ -310,22 +312,14 @@ export function checkPlaylistLimit(currentCount, addingCount = 1) {
 export function writeMusicConfigFile(tracks, preserveOrder = false) {
   if (!tracks || tracks.length === 0) return;
   const configPath = path.join(rootDir, "src", "config", "music.config.ts");
-  const defaultTrack = tracks[0];
   const r2Base = process.env.R2_PUBLIC_URL?.replace(/\/+$/, "") || "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev";
 
   let sortedTracks = [...tracks];
   if (!preserveOrder) {
-    const preferredDefault = "dracodraco - through the light.mp3";
-    const foundDefault = tracks.find(
-      (t) => t.file.toLowerCase() === preferredDefault
-    );
-    const topTrack = foundDefault || defaultTrack;
-    sortedTracks.sort((a, b) => {
-      if (a.file.toLowerCase() === topTrack.file.toLowerCase()) return -1;
-      if (b.file.toLowerCase() === topTrack.file.toLowerCase()) return 1;
-      return a.file.localeCompare(b.file, undefined, { sensitivity: "base" });
-    });
+    sortedTracks.sort((a, b) => a.file.localeCompare(b.file, undefined, { sensitivity: "base" }));
   }
+
+  const defaultTrack = sortedTracks[0];
 
   const playlistItems = sortedTracks.map((t) => {
     const baseName = t.baseName || t.file.replace(/\.mp3$/i, "").trim();
@@ -352,7 +346,62 @@ ${playlistItems.join("\n")}
 `;
 
   fs.writeFileSync(configPath, content, "utf-8");
-  console.log("   ✅ Đã cập nhật src/config/music.config.ts (Full Cloud R2 CDN links).");
+  console.log(`   ✅ Đã cập nhật src/config/music.config.ts (Default track: "${defaultTrack.name}").`);
+}
+
+/**
+ * Đồng bộ toàn diện file music.config.ts trực tiếp từ Neon SQL Database (Single Source of Truth)
+ * Luôn đảm bảo thứ tự chính xác từng bài hát khớp 100% với Admin Dashboard.
+ */
+export async function syncMusicConfigFromDatabase() {
+  loadProjectEnv();
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) return false;
+
+  try {
+    const sql = neon(dbUrl);
+    const rows = await sql`
+      SELECT title, artist, r2_key, audio_url, cover_url, sort_order
+      FROM music_tracks
+      WHERE is_active = true
+      ORDER BY sort_order ASC, created_at ASC
+    `;
+    if (!rows || rows.length === 0) return false;
+
+    const configPath = path.join(rootDir, "src", "config", "music.config.ts");
+    const r2Base = process.env.R2_PUBLIC_URL?.replace(/\/+$/, "") || "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev";
+    const defaultTrackFile = rows[0].r2_key ? rows[0].r2_key.replace(/^music\//i, "") : `${rows[0].artist} - ${rows[0].title}.mp3`;
+
+    const playlistItems = rows.map((r) => {
+      const file = r.r2_key ? r.r2_key.replace(/^music\//i, "") : `${r.artist} - ${r.title}.mp3`;
+      const baseName = file.replace(/\.mp3$/i, "").trim();
+      const audioUrl = r.audio_url || `${r2Base}/music/${encodeURIComponent(file)}`;
+      const coverUrl = r.cover_url || `${r2Base}/music/covers/${encodeURIComponent(baseName)}.jpg`;
+
+      return `  {\n    name: ${JSON.stringify(r.title)},\n    artist: ${JSON.stringify(r.artist)},\n    file: ${JSON.stringify(file)},\n    url: ${JSON.stringify(audioUrl)},\n    cover: ${JSON.stringify(coverUrl)},\n  },`;
+    });
+
+    const content = `import { MusicTrack } from "@/types";
+
+export const DEFAULT_TRACK_FILE = ${JSON.stringify(defaultTrackFile)};
+export const DEFAULT_VOLUME = 0.5;
+
+/**
+ * Danh sách nhạc dự phòng (fallback) tự động đồng bộ từ Neon PostgreSQL Database & Cloudflare R2 CDN.
+ * Thứ tự phát luôn đồng bộ theo thời gian thực với Admin Dashboard (Single Source of Truth).
+ */
+export const fallbackPlaylist: MusicTrack[] = [
+${playlistItems.join("\n")}
+];
+`;
+
+    fs.writeFileSync(configPath, content, "utf-8");
+    console.log(`   ✅ Đã cập nhật src/config/music.config.ts từ Neon DB (Bài đầu tiên: "${rows[0].title}").`);
+    return true;
+  } catch (err) {
+    console.warn("   ⚠️ Không thể đồng bộ music.config.ts từ Neon DB:", err.message);
+    return false;
+  }
 }
 
 export function readLocalTracks() {

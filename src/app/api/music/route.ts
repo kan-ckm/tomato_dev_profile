@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
         headers: {
           ...corsHeaders,
           "X-Source": "Neon-SQL-Direct",
-          "Cache-Control": "public, max-age=0, s-maxage=10, stale-while-revalidate=30",
+          "Cache-Control": "no-store, no-cache, must-revalidate",
         },
       });
     }
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
         headers: {
           ...corsHeaders,
           "X-Source": "Neon-SQL-CMS",
-          "Cache-Control": "public, max-age=0, s-maxage=10, stale-while-revalidate=30",
+          "Cache-Control": "no-store, no-cache, must-revalidate",
         },
       });
     }
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
             ...corsHeaders,
             "X-Cache": "HIT",
             "X-Source": "Redis-Offline-Fallback",
-            "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
+            "Cache-Control": "no-store, no-cache, must-revalidate",
           },
         });
       }
@@ -166,7 +166,7 @@ export async function GET(request: NextRequest) {
           headers: {
             ...corsHeaders,
             "X-Source": "Cloudflare-R2-Fallback",
-            "Cache-Control": "public, max-age=0, s-maxage=60, stale-while-revalidate=300",
+            "Cache-Control": "no-store, no-cache, must-revalidate",
           },
         });
       }

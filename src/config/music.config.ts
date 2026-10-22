@@ -1,32 +1,53 @@
 import { MusicTrack } from "@/types";
 
-export const DEFAULT_TRACK_FILE = "Blksmiith - GORE-TEX COVERS MY SOUL.mp3";
+export const DEFAULT_TRACK_FILE = "Steven Universe, Estelle, Zach Callison - True Kinda Love (feat. Estelle & Zach Callison).mp3";
 export const DEFAULT_VOLUME = 0.5;
 
 /**
- * Danh sách nhạc dự phòng (fallback) tự động đồng bộ từ Cloudflare R2 CDN & Neon SQL Database.
+ * Danh sách nhạc dự phòng (fallback) tự động đồng bộ từ Neon PostgreSQL Database & Cloudflare R2 CDN.
  * Không phụ thuộc vào file MP3 nội bộ trên máy chủ.
  */
 export const fallbackPlaylist: MusicTrack[] = [
   {
+    name: "True Kinda Love (feat. Estelle & Zach Callison)",
+    artist: "Steven Universe, Estelle, Zach Callison",
+    file: "Steven Universe, Estelle, Zach Callison - True Kinda Love (feat. Estelle & Zach Callison).mp3",
+    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/Steven Universe, Estelle, Zach Callison - True Kinda Love (feat. Estelle & Zach Callison).mp3",
+    cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/Steven%20Universe%2C%20Estelle%2C%20Zach%20Callison%20-%20True%20Kinda%20Love%20(feat.%20Estelle%20%26%20Zach%20Callison).jpg",
+  },
+  {
+    name: "Face The Future",
+    artist: "DXRKWRLD",
+    file: "DXRKWRLD - Face The Future.mp3",
+    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/DXRKWRLD - Face The Future.mp3",
+    cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/DXRKWRLD%20-%20Face%20The%20Future.jpg",
+  },
+  {
+    name: "Sinos De Natal",
+    artist: "MGD, MXZHPHXNK",
+    file: "MGD, MXZHPHXNK - Sinos De Natal.mp3",
+    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/MGD, MXZHPHXNK - Sinos De Natal.mp3",
+    cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/MGD%2C%20MXZHPHXNK%20-%20Sinos%20De%20Natal.jpg",
+  },
+  {
     name: "through the light",
     artist: "dracodraco",
     file: "dracodraco - through the light.mp3",
-    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/dracodraco%20-%20through%20the%20light.mp3",
+    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/dracodraco - through the light.mp3",
     cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/dracodraco%20-%20through%20the%20light.jpg",
   },
   {
     name: "Pure Judgement",
     artist: "amore",
     file: "amore - Pure Judgement.mp3",
-    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/amore%20-%20Pure%20Judgement.mp3",
+    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/amore - Pure Judgement.mp3",
     cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/amore%20-%20Pure%20Judgement.jpg",
   },
   {
     name: "GORE-TEX COVERS MY SOUL",
     artist: "Blksmiith",
     file: "Blksmiith - GORE-TEX COVERS MY SOUL.mp3",
-    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/Blksmiith%20-%20GORE-TEX%20COVERS%20MY%20SOUL.mp3",
+    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/Blksmiith - GORE-TEX COVERS MY SOUL.mp3",
     cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/Blksmiith%20-%20GORE-TEX%20COVERS%20MY%20SOUL.jpg",
   },
   {
@@ -44,38 +65,24 @@ export const fallbackPlaylist: MusicTrack[] = [
     cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/Clarion%20-%20Hello%20Juliet.jpg",
   },
   {
-    name: "Face The Future",
-    artist: "DXRKWRLD",
-    file: "DXRKWRLD - Face The Future.mp3",
-    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/DXRKWRLD%20-%20Face%20The%20Future.mp3",
-    cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/DXRKWRLD%20-%20Face%20The%20Future.jpg",
-  },
-  {
-    name: "Malcom Todd (Slowed + Reverb)",
-    artist: "Earrings",
-    file: "Earrings - Malcom Todd (Slowed + Reverb).mp3",
-    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/Earrings%20-%20Malcom%20Todd%20(Slowed%20%2B%20Reverb).mp3",
-    cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/Earrings%20-%20Malcom%20Todd%20(Slowed%20%2B%20Reverb).jpg",
-  },
-  {
     name: "Subject Haise",
     artist: "FlowerBoyDeMii",
     file: "FlowerBoyDeMii - Subject Haise.mp3",
-    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/FlowerBoyDeMii%20-%20Subject%20Haise.mp3",
+    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/FlowerBoyDeMii - Subject Haise.mp3",
     cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/FlowerBoyDeMii%20-%20Subject%20Haise.jpg",
   },
   {
     name: "Shine or Die",
     artist: "Ftlframe",
     file: "Ftlframe - Shine or Die.mp3",
-    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/Ftlframe%20-%20Shine%20or%20Die.mp3",
+    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/Ftlframe - Shine or Die.mp3",
     cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/Ftlframe%20-%20Shine%20or%20Die.jpg",
   },
   {
     name: "Blazing in the Dark",
     artist: "GnB Chili",
     file: "GnB Chili - Blazing in the Dark.mp3",
-    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/GnB%20Chili%20-%20Blazing%20in%20the%20Dark.mp3",
+    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/GnB Chili - Blazing in the Dark.mp3",
     cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/GnB%20Chili%20-%20Blazing%20in%20the%20Dark.jpg",
   },
   {
@@ -124,7 +131,7 @@ export const fallbackPlaylist: MusicTrack[] = [
     name: "amnesia",
     artist: "In Explosions",
     file: "In Explosions - amnesia.mp3",
-    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/In%20Explosions%20-%20amnesia.mp3",
+    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/In Explosions - amnesia.mp3",
     cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/In%20Explosions%20-%20amnesia.jpg",
   },
   {
@@ -149,39 +156,11 @@ export const fallbackPlaylist: MusicTrack[] = [
     cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/Jesse%20Barrera%20-%20No%20Reservations.jpg",
   },
   {
-    name: "Magnolia",
-    artist: "Laufey",
-    file: "Laufey - Magnolia.mp3",
-    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/Laufey%20-%20Magnolia.mp3",
-    cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/Laufey%20-%20Magnolia.jpg",
-  },
-  {
-    name: "Valentine",
-    artist: "Laufey",
-    file: "Laufey - Valentine.mp3",
-    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/Laufey%20-%20Valentine.mp3",
-    cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/Laufey%20-%20Valentine.jpg",
-  },
-  {
-    name: "Show me how",
-    artist: "Men I Trust",
-    file: "Men I Trust - Show me how.mp3",
-    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/Men%20I%20Trust%20-%20Show%20me%20how.mp3",
-    cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/Men%20I%20Trust%20-%20Show%20me%20how.jpg",
-  },
-  {
     name: "Final wish",
     artist: "ooxygen",
     file: "ooxygen - Final wish.mp3",
-    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/ooxygen%20-%20Final%20wish.mp3",
+    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/ooxygen - Final wish.mp3",
     cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/ooxygen%20-%20Final%20wish.jpg",
-  },
-  {
-    name: "Infatuated",
-    artist: "Rangga Jones",
-    file: "Rangga Jones - Infatuated.mp3",
-    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/Rangga%20Jones%20-%20Infatuated.mp3",
-    cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/Rangga%20Jones%20-%20Infatuated.jpg",
   },
   {
     name: "Traingazing",
@@ -208,15 +187,8 @@ export const fallbackPlaylist: MusicTrack[] = [
     name: "Emptiness",
     artist: "TOKYOPILL",
     file: "TOKYOPILL - Emptiness.mp3",
-    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/TOKYOPILL%20-%20Emptiness.mp3",
+    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/TOKYOPILL - Emptiness.mp3",
     cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/TOKYOPILL%20-%20Emptiness.jpg",
-  },
-  {
-    name: "daisy.",
-    artist: "wave to earth",
-    file: "wave to earth - daisy..mp3",
-    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/wave%20to%20earth%20-%20daisy..mp3",
-    cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/wave%20to%20earth%20-%20daisy..jpg",
   },
   {
     name: "light",
@@ -226,17 +198,52 @@ export const fallbackPlaylist: MusicTrack[] = [
     cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/wave%20to%20earth%20-%20light.jpg",
   },
   {
-    name: "love.",
-    artist: "wave to earth",
-    file: "wave to earth - love..mp3",
-    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/wave%20to%20earth%20-%20love..mp3",
-    cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/wave%20to%20earth%20-%20love..jpg",
-  },
-  {
     name: "peach eyes",
     artist: "wave to earth",
     file: "wave to earth - peach eyes.mp3",
     url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/wave%20to%20earth%20-%20peach%20eyes.mp3",
     cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/wave%20to%20earth%20-%20peach%20eyes.jpg",
+  },
+  {
+    name: "Malcom Todd (Slowed + Reverb)",
+    artist: "Earrings",
+    file: "Earrings - Malcom Todd (Slowed + Reverb).mp3",
+    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/Earrings - Malcom Todd (Slowed + Reverb).mp3",
+    cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/Earrings%20-%20Malcom%20Todd%20(Slowed%20%2B%20Reverb).jpg",
+  },
+  {
+    name: "love.",
+    artist: "wave to earth",
+    file: "wave to earth - love..mp3",
+    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/wave to earth - love..mp3",
+    cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/wave%20to%20earth%20-%20love..jpg",
+  },
+  {
+    name: "Magnolia",
+    artist: "Laufey",
+    file: "Laufey - Magnolia.mp3",
+    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/Laufey - Magnolia.mp3",
+    cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/Laufey%20-%20Magnolia.jpg",
+  },
+  {
+    name: "daisy.",
+    artist: "wave to earth",
+    file: "wave to earth - daisy..mp3",
+    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/wave to earth - daisy..mp3",
+    cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/wave%20to%20earth%20-%20daisy..jpg",
+  },
+  {
+    name: "Valentine",
+    artist: "Laufey",
+    file: "Laufey - Valentine.mp3",
+    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/Laufey - Valentine.mp3",
+    cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/Laufey%20-%20Valentine.jpg",
+  },
+  {
+    name: "Show me how",
+    artist: "Men I Trust",
+    file: "Men I Trust - Show me how.mp3",
+    url: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/Men I Trust - Show me how.mp3",
+    cover: "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev/music/covers/Men%20I%20Trust%20-%20Show%20me%20how.jpg",
   },
 ];

@@ -37,6 +37,7 @@ import {
   embedCoverWithFfmpeg,
   checkPlaylistLimit,
   syncTrackToDatabase,
+  syncMusicConfigFromDatabase,
 } from "./lib/shared.mjs";
 
 const { s3, bucketName } = getR2Config();
@@ -138,7 +139,8 @@ async function resolveSpotifyTrack(url) {
     // Tiếp tục thử oEmbed
   }
 
-  // Lấy ảnh bìa chất lượng cao 640x640 từ oEmbed
+  // Lấy ảnh bìa chất lượng cao 640x640 từ oEmbed, fallback về 300x300 nếu cần
+  let rawThumbnail = null;
   try {
     const oRes = await fetch(
       `https://open.spotify.com/oembed?url=https://open.spotify.com/track/${id}`,
@@ -146,8 +148,9 @@ async function resolveSpotifyTrack(url) {
     );
     const oData = await oRes.json();
     if (!title) title = oData.title || "";
-    coverUrl = oData.thumbnail_url
-      ? oData.thumbnail_url.replace("ab67616d00001e02", "ab67616d0000b273")
+    rawThumbnail = oData.thumbnail_url || null;
+    coverUrl = rawThumbnail
+      ? rawThumbnail.replace("ab67616d00001e02", "ab67616d0000b273")
       : null;
   } catch {
     // Không tải được từ oEmbed
@@ -166,7 +169,13 @@ async function resolveSpotifyTrack(url) {
     title: cleanTitle,
     baseName,
     coverUrl,
-    // Vì Spotify có DRM, audio sẽ được tải qua nguồn YouTube tốt nhất
+    fallbackCoverUrl: rawThumbnail,
+    // Vì Spotify có DRM, audio sẽ được tải qua nguồn YouTube tốt nhất với cơ chế fallback
+    audioQueries: [
+      `ytsearch1:${cleanArtist} ${cleanTitle} audio`,
+      `ytsearch1:${cleanTitle} ${cleanArtist}`,
+      `ytsearch1:${cleanTitle} audio`,
+    ],
     audioQuery: `ytsearch1:${cleanArtist} ${cleanTitle} audio`,
   };
 }
@@ -175,7 +184,7 @@ async function resolveSpotifyTrack(url) {
 async function resolveYoutubeTrack(url) {
   const rawJson = execFileSync(
     "yt-dlp",
-    ["--dump-single-json", "--skip-download", url],
+    ["--js-runtimes", "node", "--dump-single-json", "--skip-download", url],
     { encoding: "utf-8", stdio: ["pipe", "pipe", "ignore"] }
   );
   const info = JSON.parse(rawJson);
@@ -205,7 +214,7 @@ async function resolveYoutubeTrack(url) {
 async function resolveSoundcloudTrack(url) {
   const rawJson = execFileSync(
     "yt-dlp",
-    ["--dump-single-json", "--skip-download", url],
+    ["--js-runtimes", "node", "--dump-single-json", "--skip-download", url],
     { encoding: "utf-8", stdio: ["pipe", "pipe", "ignore"] }
   );
   const info = JSON.parse(rawJson);
@@ -251,7 +260,7 @@ async function resolveSearchQuery(query) {
   const searchQuery = `ytsearch1:${query}`;
   const rawJson = execFileSync(
     "yt-dlp",
-    ["--dump-single-json", "--skip-download", searchQuery],
+    ["--js-runtimes", "node", "--dump-single-json", "--skip-download", searchQuery],
     { encoding: "utf-8", stdio: ["pipe", "pipe", "ignore"] }
   );
   const playlist = JSON.parse(rawJson);
@@ -331,42 +340,76 @@ async function main() {
     `temp_add_${Date.now()}.mp3`
   );
 
-  // 1. Tải ảnh bìa (Cover Art)
+  // 1. Tải ảnh bìa (Cover Art) với cơ chế Retry & Đa nguồn fallback
   let coverDownloaded = false;
-  if (trackMeta.coverUrl) {
-    try {
-      console.log(`\n🖼️  [1/3] Đang tải ảnh bìa chất lượng cao...`);
-      const cRes = await fetch(trackMeta.coverUrl, {
-        signal: AbortSignal.timeout(8000),
-      });
-      if (cRes.ok) {
-        const buf = Buffer.from(await cRes.arrayBuffer());
-        fs.writeFileSync(coverPath, buf);
-        coverDownloaded = true;
-        console.log(`   ✅ Cover đã lưu: ${path.basename(coverPath)}`);
+  const coverCandidates = [
+    trackMeta.coverUrl,
+    trackMeta.fallbackCoverUrl,
+    await fetchItunesArtwork(`${trackMeta.artist} ${trackMeta.title}`),
+  ].filter(Boolean);
+
+  if (coverCandidates.length > 0) {
+    console.log(`\n🖼️  [1/3] Đang tải ảnh bìa chất lượng cao...`);
+    for (const candUrl of coverCandidates) {
+      if (coverDownloaded) break;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const cRes = await fetch(candUrl, { signal: AbortSignal.timeout(10000) });
+          if (cRes.ok) {
+            const buf = Buffer.from(await cRes.arrayBuffer());
+            if (buf.length > 1000) {
+              fs.writeFileSync(coverPath, buf);
+              coverDownloaded = true;
+              console.log(
+                `   ✅ Cover đã lưu: ${path.basename(coverPath)} (${(buf.length / 1024).toFixed(1)} KB)`
+              );
+              break;
+            }
+          }
+        } catch {
+          if (attempt < 3) await new Promise((r) => setTimeout(r, 1000));
+        }
       }
-    } catch (e) {
-      console.warn(`   ⚠️ Lỗi tải cover: ${e.message}`);
+    }
+    if (!coverDownloaded) {
+      console.warn(`   ⚠️ Không thể tải ảnh bìa sau khi thử các nguồn candidate.`);
     }
   }
 
   // 2. Tải Audio chuẩn tối ưu qua yt-dlp (MP3 VBR 2, 44.1kHz, nhẹ & chuẩn studio)
   console.log(`\n📥 [2/3] Đang tải audio tối ưu qua yt-dlp...`);
-  const downloadSource = trackMeta.audioUrl || trackMeta.audioQuery;
-  try {
-    execFileSync(
-      "yt-dlp",
-      [
-        ...OPTIMAL_AUDIO_ARGS,
-        "-o",
-        tempMp3Path,
-        downloadSource,
-      ],
-      { stdio: ["pipe", "pipe", "ignore"] }
-    );
-  } catch (err) {
-    console.error("❌ Lỗi tải audio:", err.message);
-    if (fs.existsSync(tempMp3Path)) fs.unlinkSync(tempMp3Path);
+  const candidateSources = trackMeta.audioUrl
+    ? [trackMeta.audioUrl]
+    : (trackMeta.audioQueries || [trackMeta.audioQuery]);
+
+  let audioDownloaded = false;
+  let lastError = null;
+
+  for (const src of candidateSources) {
+    try {
+      execFileSync(
+        "yt-dlp",
+        [
+          ...OPTIMAL_AUDIO_ARGS,
+          "-o",
+          tempMp3Path,
+          src,
+        ],
+        { stdio: ["pipe", "pipe", "ignore"] }
+      );
+      if (fs.existsSync(tempMp3Path) && fs.statSync(tempMp3Path).size > 1000) {
+        audioDownloaded = true;
+        break;
+      }
+    } catch (err) {
+      lastError = err;
+      if (fs.existsSync(tempMp3Path)) fs.unlinkSync(tempMp3Path);
+      console.warn(`   ⚠️ Nguồn "${src}" không thành công, đang thử nguồn dự phòng...`);
+    }
+  }
+
+  if (!audioDownloaded) {
+    console.error("❌ Lỗi tải audio:", lastError ? lastError.message : "Không thể tải từ bất kỳ nguồn nào");
     process.exit(1);
   }
 
@@ -398,9 +441,12 @@ async function main() {
   // 5. Đồng bộ vào Neon PostgreSQL Database (Single Source of Truth)
   await syncTrackToDatabase(newTrack);
 
-  // 6. Cập nhật file cấu hình music.config.ts và làm mới Redis Cache
+  // 6. Cập nhật file cấu hình music.config.ts trực tiếp từ Neon DB (hoặc fallback đĩa) và làm mới Redis Cache
   const allLocalTracks = readLocalTracks();
-  writeMusicConfigFile(allLocalTracks);
+  const syncedFromDb = await syncMusicConfigFromDatabase();
+  if (!syncedFromDb) {
+    writeMusicConfigFile(allLocalTracks);
+  }
   await invalidateRedisMusicCache();
 
   console.log("\n========================================================");

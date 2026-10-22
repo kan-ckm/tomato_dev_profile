@@ -159,7 +159,7 @@ async function downloadSingleTrack(trackUrl, index, total) {
   try {
     const jsonOutput = execFileSync(
       "yt-dlp",
-      ["--dump-single-json", "--skip-download", trackUrl],
+      ["--js-runtimes", "node", "--dump-single-json", "--skip-download", trackUrl],
       { encoding: "utf-8", stdio: ["pipe", "pipe", "ignore"] }
     );
     trackInfo = extractTrackInfo(JSON.parse(jsonOutput));
@@ -266,7 +266,7 @@ async function main() {
   try {
     const rawJson = execFileSync(
       "yt-dlp",
-      ["--dump-single-json", "--flat-playlist", "--skip-download", queryUrl],
+      ["--js-runtimes", "node", "--dump-single-json", "--flat-playlist", "--skip-download", queryUrl],
       { encoding: "utf-8", stdio: ["pipe", "pipe", "ignore"] }
     );
     playlistData = JSON.parse(rawJson);
