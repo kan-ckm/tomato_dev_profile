@@ -45,8 +45,17 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Kiểm tra kết nối SSH tới Homelab (Hỗ trợ phát hiện link xác thực Tailscale SSH)
+# Kiểm tra kết nối SSH tới Homelab (Hỗ trợ phát hiện link xác thực Tailscale SSH hoặc chạy local trực tiếp)
 check_connection() {
+    # Nếu đang chạy trực tiếp trên Homelab (có docker socket hoặc file docker-compose.yml cùng thư mục)
+    if [ -e "/var/run/docker.sock" ] || [ -f "${PROJECT_ROOT}/docker-compose.yml" ]; then
+        if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+            IS_LOCAL_HOST=true
+            log_success "Đang thực thi trực tiếp trên máy chủ Homelab qua Docker engine."
+            return 0
+        fi
+    fi
+
     if [ -z "${HOMELAB_HOST}" ]; then
         log_error "Chưa cấu hình HOMELAB_HOST!"
         echo "Vui lòng kiểm tra file cấu hình: ${SCRIPT_DIR}/.env"
@@ -149,11 +158,16 @@ get_compose_profile_args() {
 # Build và khởi chạy cụm Docker trên Homelab
 cmd_up() {
     check_connection
-    sync_code
     local profile_args
     profile_args="$(get_compose_profile_args)"
-    log_info "Bắt đầu build (BuildKit Cache) và khởi động cụm Docker trên Homelab..."
-    ssh -t "${REMOTE_TARGET}" "cd ${HOMELAB_DIR} && DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker compose ${profile_args} up -d --build --remove-orphans"
+    if [ "${IS_LOCAL_HOST:-false}" = true ]; then
+        log_info "Bắt đầu build và khởi động cụm Docker trực tiếp trên Homelab..."
+        cd "${PROJECT_ROOT}" && DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker compose ${profile_args} up -d --build --remove-orphans
+    else
+        sync_code
+        log_info "Bắt đầu build (BuildKit Cache) và khởi động cụm Docker trên Homelab..."
+        ssh -t "${REMOTE_TARGET}" "cd ${HOMELAB_DIR} && DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 docker compose ${profile_args} up -d --build --remove-orphans"
+    fi
     log_success "Hệ thống TomatoDevs Profile đã được triển khai thành công trên Homelab!"
     cmd_ps
     print_endpoints
@@ -200,7 +214,11 @@ cmd_set_tunnel() {
 cmd_down() {
     check_connection
     log_info "Đang dừng toàn bộ cụm Docker trên Homelab..."
-    ssh -t "${REMOTE_TARGET}" "cd ${HOMELAB_DIR} && docker compose --profile tunnel down"
+    if [ "${IS_LOCAL_HOST:-false}" = true ]; then
+        cd "${PROJECT_ROOT}" && docker compose --profile tunnel down
+    else
+        ssh -t "${REMOTE_TARGET}" "cd ${HOMELAB_DIR} && docker compose --profile tunnel down"
+    fi
     log_success "Đã dừng cụm Docker trên Homelab."
 }
 
@@ -208,7 +226,11 @@ cmd_down() {
 cmd_restart() {
     check_connection
     log_info "Khởi động lại cụm Docker trên Homelab..."
-    ssh -t "${REMOTE_TARGET}" "cd ${HOMELAB_DIR} && docker compose restart"
+    if [ "${IS_LOCAL_HOST:-false}" = true ]; then
+        cd "${PROJECT_ROOT}" && docker compose restart
+    else
+        ssh -t "${REMOTE_TARGET}" "cd ${HOMELAB_DIR} && docker compose restart"
+    fi
     log_success "Đã khởi động lại cụm Docker."
 }
 
@@ -216,12 +238,22 @@ cmd_restart() {
 cmd_logs() {
     check_connection
     SERVICE="${1:-}"
-    if [ -n "$SERVICE" ]; then
-        log_info "Theo dõi log của service [${SERVICE}] trên Homelab..."
-        ssh -t "${REMOTE_TARGET}" "cd ${HOMELAB_DIR} && docker compose logs -f ${SERVICE}"
+    if [ "${IS_LOCAL_HOST:-false}" = true ]; then
+        if [ -n "$SERVICE" ]; then
+            log_info "Theo dõi log của service [${SERVICE}] trên Homelab..."
+            cd "${PROJECT_ROOT}" && docker compose logs -f "${SERVICE}"
+        else
+            log_info "Theo dõi log của toàn bộ hệ thống trên Homelab..."
+            cd "${PROJECT_ROOT}" && docker compose logs -f --tail=100
+        fi
     else
-        log_info "Theo dõi log của toàn bộ hệ thống trên Homelab..."
-        ssh -t "${REMOTE_TARGET}" "cd ${HOMELAB_DIR} && docker compose logs -f --tail=100"
+        if [ -n "$SERVICE" ]; then
+            log_info "Theo dõi log của service [${SERVICE}] trên Homelab..."
+            ssh -t "${REMOTE_TARGET}" "cd ${HOMELAB_DIR} && docker compose logs -f ${SERVICE}"
+        else
+            log_info "Theo dõi log của toàn bộ hệ thống trên Homelab..."
+            ssh -t "${REMOTE_TARGET}" "cd ${HOMELAB_DIR} && docker compose logs -f --tail=100"
+        fi
     fi
 }
 
@@ -229,7 +261,11 @@ cmd_logs() {
 cmd_ps() {
     check_connection
     log_info "Trạng thái các container TomatoDevs Profile trên Homelab:"
-    ssh "${REMOTE_TARGET}" "cd ${HOMELAB_DIR} && docker compose ps"
+    if [ "${IS_LOCAL_HOST:-false}" = true ]; then
+        cd "${PROJECT_ROOT}" && docker compose ps
+    else
+        ssh "${REMOTE_TARGET}" "cd ${HOMELAB_DIR} && docker compose ps"
+    fi
 }
 
 # Chế độ tự động theo dõi thay đổi ở máy local và đẩy thẳng lên Homelab
@@ -253,7 +289,11 @@ cmd_watch() {
 cmd_clean() {
     check_connection
     log_info "Dọn dẹp build cache và image cũ không dùng trên Homelab..."
-    ssh -t "${REMOTE_TARGET}" "docker image prune -f"
+    if [ "${IS_LOCAL_HOST:-false}" = true ]; then
+        docker image prune -f
+    else
+        ssh -t "${REMOTE_TARGET}" "docker image prune -f"
+    fi
     log_success "Đã dọn dẹp sạch dangling images trên Homelab."
 }
 
@@ -310,7 +350,11 @@ case "${COMMAND}" in
         ;;
     sync)
         check_connection
-        sync_code
+        if [ "${IS_LOCAL_HOST:-false}" = true ]; then
+            log_success "Mã nguồn và tài nguyên đã có sẵn trực tiếp trên Homelab."
+        else
+            sync_code
+        fi
         ;;
     watch)
         cmd_watch
