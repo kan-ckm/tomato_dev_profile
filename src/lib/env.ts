@@ -1,3 +1,13 @@
+import dns from "node:dns";
+
+/**
+ * Ưu tiên IPv4 trước IPv6 để ngăn ngừa lỗi timeout (Happy Eyeballs ETIMEDOUT)
+ * trong môi trường Docker container không có IPv6 gateway ngoài Internet.
+ */
+if (typeof dns.setDefaultResultOrder === "function") {
+  dns.setDefaultResultOrder("ipv4first");
+}
+
 /**
  * Quản lý & chuẩn hóa tập trung toàn bộ biến môi trường (Environment Variables)
  * Giúp dễ dàng mở rộng, kiểm tra cấu hình và tránh truy cập process.env phân tán.

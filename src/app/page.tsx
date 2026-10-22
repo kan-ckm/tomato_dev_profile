@@ -1,11 +1,19 @@
 import React from "react";
-import { bioLinks, profileConfig } from "@/config/site.config";
+import { profileConfig } from "@/config/site.config";
 import { ProfileSidebar } from "@/components/profile/ProfileSidebar";
 import { LinkCard } from "@/components/profile/LinkCard";
 import { TikTokCard } from "@/components/profile/TikTokCard";
 import { MediaShowcase } from "@/components/profile/MediaShowcase";
+import { getBioLinks, getMediaShowcaseConfig } from "@/lib/cms";
 
-export default function HomePage() {
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const [links, mediaConfig] = await Promise.all([
+    getBioLinks(),
+    getMediaShowcaseConfig(),
+  ]);
+
   return (
     <div className="wrapper relative z-[2] mx-auto max-w-[480px] pb-[60px] lg:grid lg:h-screen lg:max-w-[1000px] lg:grid-cols-[minmax(300px,358.4px)_1fr] lg:items-stretch lg:gap-8 lg:px-6 lg:py-[30px]">
       {/* Left Sidebar (Profile + Desktop Full Player) */}
@@ -18,7 +26,7 @@ export default function HomePage() {
           <div className="flex items-center gap-2">
             <span>Links</span>
             <span className="rounded-full border border-white/10 bg-white/[0.05] px-2 py-0.5 text-[0.62rem] font-numeric text-muted">
-              {bioLinks.length}
+              {links.length}
             </span>
           </div>
           <span className="h-[1px] flex-1 bg-border" />
@@ -28,7 +36,7 @@ export default function HomePage() {
         </div>
 
         <div className="links custom-scrollbar mx-6 flex max-h-[265px] flex-col gap-2 overflow-y-auto pr-1.5 py-1">
-          {bioLinks.map((link, index) => (
+          {links.map((link, index) => (
             <LinkCard key={link.id} link={link} index={index} />
           ))}
         </div>
@@ -42,7 +50,7 @@ export default function HomePage() {
         </div>
 
         <div className="media-container px-6">
-          <MediaShowcase />
+          <MediaShowcase config={mediaConfig} />
         </div>
 
         {/* Section Divider */}

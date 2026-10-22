@@ -123,7 +123,7 @@ export function MediaShowcase({ config: customConfig, className }: MediaShowcase
                     isPlaying ? "opacity-0 group-hover:opacity-100" : "opacity-100"
                   )}
                 >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-black shadow-md backdrop-blur-sm transition-transform group-hover:scale-110">
+                  <div className="flex h-9 w-9 min-w-9 min-h-9 shrink-0 aspect-square items-center justify-center rounded-full bg-white/90 text-black shadow-md backdrop-blur-sm transition-transform group-hover:scale-110">
                     {isPlaying ? (
                       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                         <rect x="6" y="4" width="4" height="16" />

@@ -1,6 +1,7 @@
 import { Redis } from "@upstash/redis";
 import { env } from "./env";
-import type { MusicTrack } from "../types";
+import type { MusicTrack, BioLink } from "../types";
+import type { MediaBlockConfig } from "../config/media.config";
 
 export interface CachedTikTokData {
   followers: number;
@@ -22,11 +23,14 @@ export const REDIS_KEYS = {
   TIKTOK_LOCK: "tomato:tiktok:refresh_lock",
   MUSIC_PLAYLIST: "tomato:r2:music_playlist",
   MUSIC_LOCK: "tomato:r2:music_refresh_lock",
+  CMS_BIO_LINKS: "tomato:cms:bio_links",
+  CMS_MEDIA_SHOWCASE: "tomato:cms:media_showcase",
 } as const;
 
 const TIKTOK_TTL_SECONDS = 24 * 60 * 60; // 24 giờ lưu trữ bền vững
 const TIKTOK_FRESH_MS = 30 * 60 * 1000;  // 30 phút coi là dữ liệu mới (Fresh)
 const MUSIC_TTL_SECONDS = 10 * 60;       // 10 phút cache danh sách nhạc R2
+const CMS_TTL_SECONDS = 60 * 60;         // 1 giờ cache nội dung CMS (Bio Links & Media)
 const L1_MEMORY_TTL_MS = 60 * 1000;      // 60 giây cache siêu tốc trên RAM (L1)
 const MAX_L1_CACHE_KEYS = 50;            // Giới hạn số khóa trong L1 RAM Cache
 
@@ -39,6 +43,8 @@ interface L1CacheEntry<T> {
 const l1Cache = new Map<string, L1CacheEntry<unknown>>();
 let memoryTikTokFallback: CachedTikTokData | null = null;
 let memoryMusicFallback: MusicTrack[] | null = null;
+let memoryBioLinksFallback: BioLink[] | null = null;
+let memoryMediaFallback: MediaBlockConfig | null = null;
 
 // Khóa chống trùng lặp trong bộ nhớ nếu Redis không bật
 const memoryLocks = new Map<string, number>();
@@ -283,7 +289,120 @@ export async function invalidateMusicPlaylistCache(): Promise<void> {
 }
 
 // ============================================================================
-// 3. REDIS DIAGNOSTICS & HEALTH CHECK
+// 3. CMS CONTENT DUAL-LAYER CACHE (BIO LINKS & MEDIA SHOWCASE)
+// ============================================================================
+
+/**
+ * Đọc danh sách Bio Links từ L1 RAM hoặc L2 Redis
+ */
+export async function getCachedBioLinks(): Promise<BioLink[] | null> {
+  const l1List = getL1<BioLink[]>(REDIS_KEYS.CMS_BIO_LINKS);
+  if (l1List && Array.isArray(l1List) && l1List.length > 0) {
+    return l1List;
+  }
+
+  const redis = getRedisClient();
+  if (redis) {
+    try {
+      const cached = await redis.get<BioLink[]>(REDIS_KEYS.CMS_BIO_LINKS);
+      if (cached && Array.isArray(cached) && cached.length > 0) {
+        memoryBioLinksFallback = cached;
+        setL1(REDIS_KEYS.CMS_BIO_LINKS, cached);
+        return cached;
+      }
+    } catch (err) {
+      console.warn("[Redis] Error reading bio_links cache:", err);
+    }
+  }
+
+  return memoryBioLinksFallback;
+}
+
+/**
+ * Ghi danh sách Bio Links vào L1 RAM và L2 Redis
+ */
+export async function setCachedBioLinks(links: BioLink[]): Promise<void> {
+  if (!links || links.length === 0) return;
+
+  memoryBioLinksFallback = links;
+  setL1(REDIS_KEYS.CMS_BIO_LINKS, links);
+
+  const redis = getRedisClient();
+  if (redis) {
+    try {
+      await redis.set(REDIS_KEYS.CMS_BIO_LINKS, links, { ex: CMS_TTL_SECONDS });
+    } catch (err) {
+      console.warn("[Redis] Error writing bio_links cache:", err);
+    }
+  }
+}
+
+/**
+ * Đọc cấu hình Media Showcase (GIF/Video) từ L1 RAM hoặc L2 Redis
+ */
+export async function getCachedMediaShowcase(): Promise<MediaBlockConfig | null> {
+  const l1 = getL1<MediaBlockConfig>(REDIS_KEYS.CMS_MEDIA_SHOWCASE);
+  if (l1 && typeof l1 === "object" && l1.src) {
+    return l1;
+  }
+
+  const redis = getRedisClient();
+  if (redis) {
+    try {
+      const cached = await redis.get<MediaBlockConfig>(REDIS_KEYS.CMS_MEDIA_SHOWCASE);
+      if (cached && typeof cached === "object" && cached.src) {
+        memoryMediaFallback = cached;
+        setL1(REDIS_KEYS.CMS_MEDIA_SHOWCASE, cached);
+        return cached;
+      }
+    } catch (err) {
+      console.warn("[Redis] Error reading media_showcase cache:", err);
+    }
+  }
+
+  return memoryMediaFallback;
+}
+
+/**
+ * Ghi cấu hình Media Showcase vào L1 RAM và L2 Redis
+ */
+export async function setCachedMediaShowcase(config: MediaBlockConfig): Promise<void> {
+  if (!config || !config.src) return;
+
+  memoryMediaFallback = config;
+  setL1(REDIS_KEYS.CMS_MEDIA_SHOWCASE, config);
+
+  const redis = getRedisClient();
+  if (redis) {
+    try {
+      await redis.set(REDIS_KEYS.CMS_MEDIA_SHOWCASE, config, { ex: CMS_TTL_SECONDS });
+    } catch (err) {
+      console.warn("[Redis] Error writing media_showcase cache:", err);
+    }
+  }
+}
+
+/**
+ * Xóa cache CMS (Được gọi sau khi Admin lưu hoặc xóa Bio Links / Media trên Admin Dash)
+ */
+export async function invalidateCmsCache(): Promise<void> {
+  memoryBioLinksFallback = null;
+  memoryMediaFallback = null;
+  l1Cache.delete(REDIS_KEYS.CMS_BIO_LINKS);
+  l1Cache.delete(REDIS_KEYS.CMS_MEDIA_SHOWCASE);
+
+  const redis = getRedisClient();
+  if (redis) {
+    try {
+      await redis.del(REDIS_KEYS.CMS_BIO_LINKS, REDIS_KEYS.CMS_MEDIA_SHOWCASE);
+    } catch (err) {
+      console.warn("[Redis] Error invalidating CMS cache:", err);
+    }
+  }
+}
+
+// ============================================================================
+// 4. REDIS DIAGNOSTICS & HEALTH CHECK
 // ============================================================================
 
 /**
