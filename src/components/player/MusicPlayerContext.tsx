@@ -48,6 +48,15 @@ interface MusicPlayerContextValue {
 
 const MusicPlayerContext = createContext<MusicPlayerContextValue | null>(null);
 
+const R2_PUBLIC_BASE = "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev";
+
+function resolveTrackAudioSrc(track?: MusicTrack): string {
+  if (!track) return "";
+  if (track.url && track.url.startsWith("http")) return track.url;
+  if (track.file) return `${R2_PUBLIC_BASE}/music/${encodeURIComponent(track.file)}`;
+  return "";
+}
+
 export function MusicPlayerProvider({ children }: { children: React.ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastNonZeroVolumeRef = useRef<number>(DEFAULT_VOLUME);
@@ -127,7 +136,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
     // Khởi tạo ngay bài hát mặc định để audio.src không bao giờ bị rỗng
     const initialTrack = fallbackPlaylist.find((t) => t.file === DEFAULT_TRACK_FILE) || fallbackPlaylist[0];
     if (audioRef.current && initialTrack && !audioRef.current.src) {
-      audioRef.current.src = initialTrack.url || `/assets/music/${encodeURIComponent(initialTrack.file)}`;
+      audioRef.current.src = resolveTrackAudioSrc(initialTrack);
     }
 
     const initTrackFromStorage = (tracks: MusicTrack[]) => {
@@ -143,7 +152,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       setCurrentTrackIndex(resolvedIndex);
       const track = tracks[resolvedIndex];
       if (track && audioRef.current) {
-        const targetSrc = track.url || `/assets/music/${encodeURIComponent(track.file)}`;
+        const targetSrc = resolveTrackAudioSrc(track);
         if (audioRef.current.src !== targetSrc) {
           audioRef.current.src = targetSrc;
         }
@@ -185,15 +194,15 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       }
     };
 
-    fetch("/api/music", { cache: "no-cache" })
+    fetch("/api/music", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (!isMounted) return;
         const rawTracks =
           data && Array.isArray(data) && data.length > 0 ? data : fallbackPlaylist;
-        const orderedTracks = applyCustomOrder(rawTracks);
-        setPlaylist(orderedTracks);
-        initTrackFromStorage(orderedTracks);
+        // Ưu tiên thứ tự chuẩn trực tiếp từ Central SQL Database
+        setPlaylist(rawTracks);
+        initTrackFromStorage(rawTracks);
       })
       .catch(() => {
         if (!isMounted) return;
@@ -265,7 +274,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       safeStorageSet("music_track_file", track.file);
 
       const audio = audioRef.current;
-      const targetSrc = track.url || `/assets/music/${encodeURIComponent(track.file)}`;
+      const targetSrc = resolveTrackAudioSrc(track);
       if (audio.src !== targetSrc && !audio.src.endsWith(encodeURIComponent(track.file))) {
         audio.src = targetSrc;
         setCurrentTime(0);
@@ -527,10 +536,10 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
           const audio = audioRef.current;
           const track = playlist[currentTrackIndex];
           if (audio && track && track.file) {
-            const localFallback = `/assets/music/${encodeURIComponent(track.file)}`;
-            if (audio.src !== localFallback && !audio.src.endsWith(encodeURIComponent(track.file))) {
-              console.warn("[MusicPlayer] Streaming failed, falling back to local file:", track.file);
-              audio.src = localFallback;
+            const r2Fallback = `${R2_PUBLIC_BASE}/music/${encodeURIComponent(track.file)}`;
+            if (audio.src !== r2Fallback) {
+              console.warn("[MusicPlayer] Streaming error, retrying direct R2 CDN:", track.file);
+              audio.src = r2Fallback;
               audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
               return;
             }
