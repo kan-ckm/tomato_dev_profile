@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useMusicPlayer } from "./MusicPlayerContext";
 import { VinylDisc } from "./VinylDisc";
 import { cn, formatTime } from "@/lib/utils";
@@ -36,8 +36,36 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
   } = useMusicPlayer();
 
   const progressBarRef = useRef<HTMLDivElement>(null);
+  const volumeContainerRef = useRef<HTMLDivElement>(null);
+  const volumeRef = useRef<number>(volume);
   const [isScrubbing, setIsScrubbing] = useState<boolean>(false);
   const [scrubPercent, setScrubPercent] = useState<number>(0);
+
+  // Giữ ref âm lượng luôn mới nhất để dùng trong wheel listener mà không cần re-bind
+  useEffect(() => {
+    volumeRef.current = volume;
+  }, [volume]);
+
+  // Hỗ trợ lăn chuột trên cụm âm lượng để tăng / giảm âm lượng mượt mà và chặn cuộn trang
+  useEffect(() => {
+    const el = volumeContainerRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      onUserInteraction?.();
+      // Lăn lên (deltaY < 0): tăng volume (+5%), Lăn xuống (deltaY > 0): giảm volume (-5%)
+      const step = 0.05;
+      const delta = e.deltaY < 0 ? step : -step;
+      const next = Math.round((volumeRef.current + delta) * 100) / 100;
+      setVolume(Math.max(0, Math.min(1, next)));
+    };
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", handleWheel);
+    };
+  }, [onUserInteraction, setVolume]);
 
   // Trạng thái kéo thả (Drag and Drop) danh sách nhạc
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -198,21 +226,27 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
           />
 
           <div className="min-w-0 flex-1">
-            <div className="mb-0.5 flex items-center justify-between gap-2">
-              <span className="truncate font-display text-[0.95rem] font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)]">
+            <div className="mb-0.5 flex items-center justify-between gap-2 min-w-0">
+              <span
+                className="truncate font-display text-[0.95rem] font-bold text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] min-w-0 flex-1"
+                title={currentTrack ? currentTrack.name : "Select a track"}
+              >
                 {currentTrack ? currentTrack.name : "Select a track"}
               </span>
               {playlist.length > 0 && (
-                <span className="shrink-0 rounded bg-white/10 px-1.5 py-0.5 font-numeric text-[0.68rem] font-semibold tracking-wider text-accent">
+                <span className="shrink-0 whitespace-nowrap rounded bg-white/10 px-1.5 py-0.5 font-numeric text-[0.68rem] font-semibold tracking-wider text-accent">
                   {String(currentTrackIndex + 1).padStart(2, "0")}/{String(playlist.length).padStart(2, "0")}
                 </span>
               )}
             </div>
-            <div className="flex items-center justify-between text-[0.72rem]">
-              <span className="truncate font-medium text-white/80">
+            <div className="flex items-center justify-between gap-2 text-[0.72rem] min-w-0">
+              <span
+                className="truncate font-medium text-white/80 min-w-0 flex-1"
+                title={currentTrack?.artist || "Unknown artist"}
+              >
                 {currentTrack?.artist || "Unknown artist"}
               </span>
-              <span className="tabular-nums font-numeric text-white/50">
+              <span className="shrink-0 whitespace-nowrap tabular-nums font-numeric text-white/50 text-right">
                 {formatTime(currentTime)} / {formatTime(duration)}
               </span>
             </div>
@@ -254,9 +288,9 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="mt-[15px] flex items-center justify-between">
-          <div className="flex items-center gap-[11px]">
+        {/* Controls: Single Row - All controls aligned with compact 3-bar playlist icon */}
+        <div className="mt-[15px] flex items-center justify-between gap-1.5 sm:gap-2 min-w-0">
+          <div className="flex items-center gap-1 sm:gap-1.5 min-w-0 flex-1">
             {/* Previous Track */}
             <button
               type="button"
@@ -265,30 +299,31 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
                 onUserInteraction?.();
                 prevTrack();
               }}
-              className="flex cursor-pointer items-center justify-center border-none bg-transparent text-muted transition-all duration-200 hover:scale-110 hover:text-white"
+              className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center border-none bg-transparent text-muted transition-all duration-200 hover:scale-110 hover:text-white"
             >
               <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
               </svg>
             </button>
 
-            {/* Play/Pause */}
+            {/* Play/Pause (Always perfect circle with shrink-0 aspect-square, centered icon) */}
             <button
               type="button"
-              title="Play/Pause"
+              title={isPlaying ? "Tạm dừng" : "Phát nhạc"}
               onClick={() => {
                 onUserInteraction?.();
                 togglePlayPause();
               }}
-              className="flex h-[38px] w-[38px] cursor-pointer items-center justify-center rounded-full border-none bg-accent text-zinc-950 shadow-[0_4px_15px_rgba(255,255,255,0.25)] transition-all duration-200 hover:scale-105 hover:bg-accent2"
+              className="flex h-[38px] w-[38px] shrink-0 aspect-square cursor-pointer items-center justify-center p-0 m-0 leading-none rounded-full border-none bg-accent text-zinc-950 shadow-[0_4px_15px_rgba(255,255,255,0.25)] transition-all duration-200 hover:scale-105 hover:bg-accent2 active:scale-95"
             >
               {isPlaying ? (
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                <svg className="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="6" y="5" width="4" height="14" rx="1.5" />
+                  <rect x="14" y="5" width="4" height="14" rx="1.5" />
                 </svg>
               ) : (
-                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M8 5v14l11-7z" />
+                <svg className="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M8 5.14v13.72a1 1 0 0 0 1.53.85l10.28-6.86a1 1 0 0 0 0-1.7L9.53 4.29A1 1 0 0 0 8 5.14z" />
                 </svg>
               )}
             </button>
@@ -301,7 +336,7 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
                 onUserInteraction?.();
                 nextTrack();
               }}
-              className="flex cursor-pointer items-center justify-center border-none bg-transparent text-muted transition-all duration-200 hover:scale-110 hover:text-white"
+              className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center border-none bg-transparent text-muted transition-all duration-200 hover:scale-110 hover:text-white"
             >
               <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
@@ -321,7 +356,7 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
                 toggleShuffle();
               }}
               className={cn(
-                "flex cursor-pointer items-center justify-center border-none bg-transparent transition-all duration-200 hover:scale-110",
+                "flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center border-none bg-transparent transition-all duration-200 hover:scale-110",
                 isShuffle
                   ? "text-accent drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]"
                   : "text-muted hover:text-white"
@@ -359,7 +394,7 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
                 toggleRepeatMode();
               }}
               className={cn(
-                "relative flex cursor-pointer items-center justify-center border-none bg-transparent transition-all duration-200 hover:scale-110",
+                "relative flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center border-none bg-transparent transition-all duration-200 hover:scale-110",
                 repeatMode !== "off"
                   ? "text-accent drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]"
                   : "text-muted hover:text-white"
@@ -386,11 +421,15 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
               )}
             </button>
 
-            {/* Volume Control */}
-            <div className="flex items-center gap-1.5">
+            {/* Volume Control (Hỗ trợ lăn chuột tăng/giảm âm lượng) */}
+            <div
+              ref={volumeContainerRef}
+              title={`Âm lượng: ${Math.round(volume * 100)}% (Lăn chuột để tăng/giảm)`}
+              className="flex items-center gap-1 sm:gap-1.5 shrink-0 select-none py-1 group/volume cursor-pointer"
+            >
               <button
                 type="button"
-                title="Mute/Unmute"
+                title={volume === 0 ? "Bật âm thanh" : "Tắt tiếng"}
                 onClick={() => {
                   onUserInteraction?.();
                   toggleMute();
@@ -404,7 +443,7 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
               <input
                 type="range"
                 aria-label="Volume"
-                className="volume-slider w-14 sm:w-16"
+                className="volume-slider w-14 sm:w-16 shrink-0 cursor-pointer"
                 min="0"
                 max="1"
                 step="0.01"
@@ -420,8 +459,8 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
             </div>
           </div>
 
-          {/* Playlist Toggle with 70-Track Counter Badge */}
-          <div className="flex items-center">
+          {/* Playlist Toggle - Rút gọn chỉ còn icon 3 gạch (không còn text số lượng bài) */}
+          <div className="flex items-center shrink-0 pl-1">
             <button
               type="button"
               title={`Danh sách phát (${playlist.length}/70 bài)`}
@@ -430,7 +469,7 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
                 setIsPlaylistExpanded((prev) => !prev);
               }}
               className={cn(
-                "flex cursor-pointer items-center gap-1.5 rounded-lg border px-2 py-1 transition-all duration-200 hover:scale-105",
+                "flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border transition-all duration-200 hover:scale-105 active:scale-95",
                 isPlaylistExpanded
                   ? "border-accent/40 bg-accent/15 text-accent shadow-[0_0_12px_rgba(255,255,255,0.15)]"
                   : "border-white/10 bg-white/[0.04] text-muted hover:border-white/20 hover:bg-white/[0.08] hover:text-white"
@@ -452,9 +491,6 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
                 <line x1="3" y1="12" x2="3.01" y2="12" />
                 <line x1="3" y1="18" x2="3.01" y2="18" />
               </svg>
-              <span className="font-numeric text-[0.72rem] font-semibold text-white/90">
-                {playlist.length}<span className="text-white/40">/70</span>
-              </span>
             </button>
           </div>
         </div>
@@ -534,23 +570,27 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
                     size="sm"
                   />
 
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 overflow-hidden">
                     <div
                       className={cn(
                         "truncate text-[0.82rem] font-semibold tracking-tight",
                         active ? "text-white" : "text-zinc-200 group-hover:text-white"
                       )}
+                      title={track.name}
                     >
                       {track.name}
                     </div>
-                    <div className="truncate text-[0.68rem] text-muted">
+                    <div
+                      className="truncate text-[0.68rem] text-muted"
+                      title={track.artist}
+                    >
                       {track.artist}
                     </div>
                   </div>
 
                   {/* Mini Move Up / Down Buttons */}
                   <div
-                    className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100"
+                    className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button

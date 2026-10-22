@@ -359,7 +359,6 @@ body {
 .volume-slider {
   -webkit-appearance: none;
   appearance: none;
-  width: 65px;
   height: 5px;
   border-radius: 9999px;
   outline: none;

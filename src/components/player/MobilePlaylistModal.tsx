@@ -262,16 +262,19 @@ export function MobilePlaylistModal() {
                   size="md"
                 />
 
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 overflow-hidden">
                   <div
                     className={cn(
                       "mb-0.5 truncate text-[0.88rem] font-semibold tracking-tight",
                       active ? "text-accent3" : "text-white group-hover:text-white"
                     )}
+                    title={track.name}
                   >
                     {track.name}
                   </div>
-                  <div className="truncate text-[0.72rem] text-muted">{track.artist}</div>
+                  <div className="truncate text-[0.72rem] text-muted" title={track.artist}>
+                    {track.artist}
+                  </div>
                 </div>
 
                 {/* Mini Reorder Up / Down Buttons */}

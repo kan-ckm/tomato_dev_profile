@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 interface NavItemConfig {
@@ -46,33 +46,23 @@ const NAV_ITEMS: NavItemConfig[] = [
       </svg>
     ),
   },
-  /*
-  {
-    href: "/clock",
-    label: "Clock",
-    icon: (
-      <svg
-        className="h-[18px] w-[18px] stroke-current"
-        viewBox="0 0 24 24"
-        fill="none"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="12" cy="12" r="10" />
-        <polyline points="12 6 12 12 16 14" />
-      </svg>
-    ),
-  },
-  */
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
+  const router = useRouter();
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/" || pathname === "/index.html";
     return pathname.startsWith(href);
+  };
+
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (isActive(href)) {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
   };
 
   return (
@@ -88,6 +78,8 @@ export function BottomNav() {
             key={item.href}
             href={item.href}
             title={item.label}
+            prefetch={true}
+            onClick={(e) => handleClick(e, item.href)}
             className={cn(
               "nav-item relative flex items-center gap-2 rounded-full px-3.5 py-2 font-display text-[0.8rem] font-semibold tracking-[0.03em] no-underline transition-all duration-200",
               active
