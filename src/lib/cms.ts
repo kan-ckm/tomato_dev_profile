@@ -1,3 +1,10 @@
+import dns from "node:dns";
+try {
+  dns.setDefaultResultOrder("ipv4first");
+} catch {
+  // ignore
+}
+
 import { ProjectItem, ProjectBadgeType, ProjectGlowVariant, MusicTrack, BioLink } from "@/types";
 import { projectsConfig } from "@/config/projects.config";
 import { bioLinks as fallbackBioLinks } from "@/config/links.config";
@@ -100,7 +107,7 @@ export async function getMusicPlaylistFromDatabase(): Promise<MusicTrack[] | nul
     const sql = neon(env.database.url);
     const rows = await sql`
       SELECT 
-        id, title, artist, r2_key, audio_url, cover_url, sort_order, is_default
+        id, title, artist, r2_key, audio_url, cover_url, sort_order
       FROM music_tracks
       WHERE is_active = true
       ORDER BY sort_order ASC, created_at ASC
@@ -110,16 +117,22 @@ export async function getMusicPlaylistFromDatabase(): Promise<MusicTrack[] | nul
       return null;
     }
 
-    return rows.map((r) => {
+    const r2Base = "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev";
+
+    return rows.map((r, idx) => {
       const file = r.r2_key ? r.r2_key.replace(/^music\//i, "") : `${r.artist} - ${r.title}.mp3`;
+      const baseName = file.replace(/\.mp3$/i, "").trim();
+      const audioUrl = r.audio_url || `${r2Base}/music/${encodeURIComponent(file)}`;
+      const coverUrl = r.cover_url || `${r2Base}/music/covers/${encodeURIComponent(baseName)}.jpg`;
+
       return {
         id: String(r.id),
         name: String(r.title),
         artist: String(r.artist),
         file,
-        url: String(r.audio_url || ""),
-        cover: String(r.cover_url || ""),
-        isDefault: Boolean(r.is_default),
+        url: String(audioUrl),
+        cover: String(coverUrl),
+        isDefault: idx === 0,
       };
     });
   } catch (err) {

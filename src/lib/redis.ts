@@ -29,7 +29,7 @@ export const REDIS_KEYS = {
 
 const TIKTOK_TTL_SECONDS = 24 * 60 * 60; // 24 giờ lưu trữ bền vững
 const TIKTOK_FRESH_MS = 30 * 60 * 1000;  // 30 phút coi là dữ liệu mới (Fresh)
-const MUSIC_TTL_SECONDS = 10 * 60;       // 10 phút cache danh sách nhạc R2
+const MUSIC_TTL_SECONDS = 120;            // 2 phút cache danh sách nhạc (Admin xóa tức thì khi có thay đổi)
 const CMS_TTL_SECONDS = 60 * 60;         // 1 giờ cache nội dung CMS (Bio Links & Media)
 const L1_MEMORY_TTL_MS = 60 * 1000;      // 60 giây cache siêu tốc trên RAM (L1)
 const MAX_L1_CACHE_KEYS = 50;            // Giới hạn số khóa trong L1 RAM Cache
@@ -249,7 +249,8 @@ export async function getCachedMusicPlaylist(): Promise<MusicTrack[] | null> {
     }
   }
 
-  return memoryMusicFallback;
+  // Khi Redis rỗng hoặc key đã bị Admin xóa, trả về null để tầng tiếp theo đọc trực tiếp từ Neon SQL
+  return null;
 }
 
 /**
