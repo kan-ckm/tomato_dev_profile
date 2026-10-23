@@ -1,5 +1,8 @@
 import fs from "fs";
 import path from "path";
+import http from "http";
+import https from "https";
+import dns from "node:dns";
 import { fileURLToPath } from "url";
 import { execFileSync } from "child_process";
 import {
@@ -7,8 +10,12 @@ import {
   ListObjectsV2Command,
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
-import { Redis } from "@upstash/redis";
 import { neon } from "@neondatabase/serverless";
+
+// Ưu tiên IPv4 trước để chống triệt để lỗi DNS IPv6 timeout trong môi trường Docker container
+if (typeof dns.setDefaultResultOrder === "function") {
+  dns.setDefaultResultOrder("ipv4first");
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -164,25 +171,116 @@ export async function clearMusicFromCloudAndLocal() {
   );
 }
 
+const REDIS_INVALIDATE_TIMEOUT_MS = 2500;
+
+/**
+ * Gửi lệnh DEL tới 1 endpoint Redis REST (Upstash / serverless-redis-http)
+ * với timeout cứng và KHÔNG retry.
+ *
+ * Lý do không dùng `new Redis()` của @upstash/redis ở đây: client mặc định
+ * retry 5 lần với exponential backoff, mỗi lần chờ connect timeout của undici (~10s).
+ * Khi một endpoint không reachable (vd: IP Tailscale 100.119.185.5 từ bên trong
+ * container Docker) thì một lệnh DEL có thể treo ~70 giây.
+ *
+ * Dùng node:http/https thay vì fetch: với fetch (undici), abort KHÔNG hủy socket đang
+ * connect → event loop bị giữ thêm ~10s khiến script chậm thoát. `req.destroy()` thì có.
+ */
+function redisRestDel(url, token, keys) {
+  return new Promise((resolve, reject) => {
+    const target = new URL(url.replace(/\/+$/, "") || url);
+    const client = target.protocol === "https:" ? https : http;
+    const body = JSON.stringify(["DEL", ...keys]);
+    const req = client.request(
+      target,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(body),
+        },
+        timeout: REDIS_INVALIDATE_TIMEOUT_MS,
+      },
+      (res) => {
+        let raw = "";
+        res.setEncoding("utf-8");
+        res.on("data", (chunk) => (raw += chunk));
+        res.on("end", () => {
+          if (res.statusCode < 200 || res.statusCode >= 300) {
+            return reject(new Error(`HTTP ${res.statusCode}`));
+          }
+          try {
+            const data = JSON.parse(raw || "{}");
+            if (data?.error) return reject(new Error(data.error));
+            resolve(data?.result);
+          } catch {
+            resolve(undefined);
+          }
+        });
+      }
+    );
+    // Timeout cứng cho toàn bộ request (kể cả giai đoạn connect)
+    const hardTimer = setTimeout(
+      () => req.destroy(new Error("timeout")),
+      REDIS_INVALIDATE_TIMEOUT_MS
+    );
+    req.on("timeout", () => req.destroy(new Error("timeout")));
+    req.on("error", reject);
+    req.on("close", () => clearTimeout(hardTimer));
+    req.end(body);
+  });
+}
+
 export async function invalidateRedisMusicCache() {
   loadProjectEnv();
-  const endpoints = [
+  const keys = ["tomato:r2:music_playlist", "tomato:r2:music_refresh_lock"];
+  const candidates = [
     { url: process.env.UPSTASH_REDIS_REST_URL?.trim(), token: process.env.UPSTASH_REDIS_REST_TOKEN?.trim() },
     { url: "http://100.119.185.5:8079", token: "tomato_local_redis_secret_token" },
     { url: "http://127.0.0.1:8079", token: "tomato_local_redis_secret_token" },
   ];
 
-  for (const ep of endpoints) {
-    if (ep.url && ep.token && !ep.url.includes("your-redis-instance")) {
-      try {
-        const redis = new Redis({ url: ep.url, token: ep.token });
-        await redis.del("tomato:r2:music_playlist", "tomato:r2:music_refresh_lock");
-        console.log(`   ✅ Đã làm mới Redis cache (${ep.url}).`);
-      } catch {
-        // ignore
+  // Lọc endpoint hợp lệ & loại trùng URL (env thường trùng với 127.0.0.1:8079)
+  const seen = new Set();
+  const endpoints = candidates.filter((ep) => {
+    if (!ep.url || !ep.token || ep.url.includes("your-redis-instance")) return false;
+    const key = ep.url.replace(/\/+$/, "");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  // Chạy song song: tổng thời gian tối đa ≈ REDIS_INVALIDATE_TIMEOUT_MS thay vì cộng dồn
+  const results = await Promise.allSettled(
+    endpoints.map((ep) => redisRestDel(ep.url, ep.token, keys))
+  );
+  results.forEach((r, i) => {
+    if (r.status === "fulfilled") {
+      console.log(`   ✅ Đã làm mới Redis cache (${endpoints[i].url}).`);
+    }
+  });
+}
+
+/**
+ * Cơ chế thử lại an toàn cho các truy vấn Neon Serverless DB qua HTTP
+ * Giúp vượt qua tình trạng gián đoạn mạng hoặc socket DNS timeout ban đầu trong Docker container
+ */
+async function retryNeonOperation(operationName, fn, maxRetries = 3, delayMs = 600) {
+  let lastError;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err;
+      if (attempt < maxRetries) {
+        console.warn(
+          `   ⚠️  [Neon DB] Lỗi tạm thời khi ${operationName} (lần ${attempt}/${maxRetries}): ${err.message}. Đang thử lại sau ${delayMs}ms...`
+        );
+        await new Promise((r) => setTimeout(r, delayMs));
       }
     }
   }
+  throw lastError;
 }
 
 /**
@@ -193,44 +291,47 @@ export async function syncTrackToDatabase(track) {
   const dbUrl = process.env.DATABASE_URL;
   if (!dbUrl) return false;
 
+  const baseName = track.baseName || track.file.replace(/\.mp3$/i, "").trim();
+
   try {
-    const sql = neon(dbUrl);
-    const r2Key = `music/${track.file}`;
-    const r2Base = process.env.R2_PUBLIC_URL?.replace(/\/+$/, "") || "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev";
-    const audioUrl = `${r2Base}/${r2Key}`;
-    const baseName = track.baseName || track.file.replace(/\.mp3$/i, "").trim();
-    const coverUrl = `${r2Base}/music/covers/${encodeURIComponent(baseName)}.jpg`;
+    return await retryNeonOperation(`đồng bộ bài hát "${track.name || baseName}"`, async () => {
+      const sql = neon(dbUrl);
+      const r2Key = `music/${track.file}`;
+      const r2Base = process.env.R2_PUBLIC_URL?.replace(/\/+$/, "") || "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev";
+      const audioUrl = `${r2Base}/${r2Key}`;
+      const coverUrl = `${r2Base}/music/covers/${encodeURIComponent(baseName)}.jpg`;
 
-    // Lấy sort_order cao nhất hiện tại
-    const maxOrderRow = await sql`SELECT MAX(sort_order) as max_order FROM music_tracks`;
-    const nextSortOrder = (Number(maxOrderRow[0]?.max_order) || 0) + 1;
-    const trackId = `track_${Math.random().toString(36).substring(2, 9)}_${Date.now().toString(36)}`;
+      // Lấy sort_order cao nhất hiện tại
+      const maxOrderRow = await sql`SELECT MAX(sort_order) as max_order FROM music_tracks`;
+      const nextSortOrder = (Number(maxOrderRow[0]?.max_order) || 0) + 1;
+      const trackId = `track_${Math.random().toString(36).substring(2, 9)}_${Date.now().toString(36)}`;
 
-    await sql`
-      INSERT INTO music_tracks (
-        id, title, artist, r2_key, audio_url, cover_url, sort_order, is_active, metadata, created_at, updated_at
-      ) VALUES (
-        ${trackId},
-        ${track.name || track.title || baseName},
-        ${track.artist || "Unknown"},
-        ${r2Key},
-        ${audioUrl},
-        ${coverUrl},
-        ${nextSortOrder},
-        true,
-        ${JSON.stringify({ source: "script_automation", base_name: baseName })},
-        NOW(),
-        NOW()
-      )
-      ON CONFLICT (r2_key) DO UPDATE
-      SET audio_url = EXCLUDED.audio_url,
-          cover_url = EXCLUDED.cover_url,
-          updated_at = NOW()
-    `;
-    console.log(`   🗄️  [Neon DB] Đã đồng bộ bài hát vào SQL Database: "${track.name || baseName}" (sort: #${nextSortOrder})`);
-    return true;
+      await sql`
+        INSERT INTO music_tracks (
+          id, title, artist, r2_key, audio_url, cover_url, sort_order, is_active, metadata, created_at, updated_at
+        ) VALUES (
+          ${trackId},
+          ${track.name || track.title || baseName},
+          ${track.artist || "Unknown"},
+          ${r2Key},
+          ${audioUrl},
+          ${coverUrl},
+          ${nextSortOrder},
+          true,
+          ${JSON.stringify({ source: "script_automation", base_name: baseName })},
+          NOW(),
+          NOW()
+        )
+        ON CONFLICT (r2_key) DO UPDATE
+        SET audio_url = EXCLUDED.audio_url,
+            cover_url = EXCLUDED.cover_url,
+            updated_at = NOW()
+      `;
+      console.log(`   🗄️  [Neon DB] Đã đồng bộ bài hát vào SQL Database: "${track.name || baseName}" (sort: #${nextSortOrder})`);
+      return true;
+    });
   } catch (err) {
-    console.warn(`   ⚠️  [Neon DB] Không thể đồng bộ bài hát vào SQL:`, err.message);
+    console.warn(`   ⚠️  [Neon DB] Không thể đồng bộ bài hát vào SQL sau nhiều lần thử:`, err.message);
     return false;
   }
 }
@@ -359,29 +460,30 @@ export async function syncMusicConfigFromDatabase() {
   if (!dbUrl) return false;
 
   try {
-    const sql = neon(dbUrl);
-    const rows = await sql`
-      SELECT title, artist, r2_key, audio_url, cover_url, sort_order
-      FROM music_tracks
-      WHERE is_active = true
-      ORDER BY sort_order ASC, created_at ASC
-    `;
-    if (!rows || rows.length === 0) return false;
+    return await retryNeonOperation("đồng bộ music.config.ts từ Neon DB", async () => {
+      const sql = neon(dbUrl);
+      const rows = await sql`
+        SELECT title, artist, r2_key, audio_url, cover_url, sort_order
+        FROM music_tracks
+        WHERE is_active = true
+        ORDER BY sort_order ASC, created_at ASC
+      `;
+      if (!rows || rows.length === 0) return false;
 
-    const configPath = path.join(rootDir, "src", "config", "music.config.ts");
-    const r2Base = process.env.R2_PUBLIC_URL?.replace(/\/+$/, "") || "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev";
-    const defaultTrackFile = rows[0].r2_key ? rows[0].r2_key.replace(/^music\//i, "") : `${rows[0].artist} - ${rows[0].title}.mp3`;
+      const configPath = path.join(rootDir, "src", "config", "music.config.ts");
+      const r2Base = process.env.R2_PUBLIC_URL?.replace(/\/+$/, "") || "https://pub-971f8c3413884a3699ded2d04761153b.r2.dev";
+      const defaultTrackFile = rows[0].r2_key ? rows[0].r2_key.replace(/^music\//i, "") : `${rows[0].artist} - ${rows[0].title}.mp3`;
 
-    const playlistItems = rows.map((r) => {
-      const file = r.r2_key ? r.r2_key.replace(/^music\//i, "") : `${r.artist} - ${r.title}.mp3`;
-      const baseName = file.replace(/\.mp3$/i, "").trim();
-      const audioUrl = r.audio_url || `${r2Base}/music/${encodeURIComponent(file)}`;
-      const coverUrl = r.cover_url || `${r2Base}/music/covers/${encodeURIComponent(baseName)}.jpg`;
+      const playlistItems = rows.map((r) => {
+        const file = r.r2_key ? r.r2_key.replace(/^music\//i, "") : `${r.artist} - ${r.title}.mp3`;
+        const baseName = file.replace(/\.mp3$/i, "").trim();
+        const audioUrl = r.audio_url || `${r2Base}/music/${encodeURIComponent(file)}`;
+        const coverUrl = r.cover_url || `${r2Base}/music/covers/${encodeURIComponent(baseName)}.jpg`;
 
-      return `  {\n    name: ${JSON.stringify(r.title)},\n    artist: ${JSON.stringify(r.artist)},\n    file: ${JSON.stringify(file)},\n    url: ${JSON.stringify(audioUrl)},\n    cover: ${JSON.stringify(coverUrl)},\n  },`;
-    });
+        return `  {\n    name: ${JSON.stringify(r.title)},\n    artist: ${JSON.stringify(r.artist)},\n    file: ${JSON.stringify(file)},\n    url: ${JSON.stringify(audioUrl)},\n    cover: ${JSON.stringify(coverUrl)},\n  },`;
+      });
 
-    const content = `import { MusicTrack } from "@/types";
+      const content = `import { MusicTrack } from "@/types";
 
 export const DEFAULT_TRACK_FILE = ${JSON.stringify(defaultTrackFile)};
 export const DEFAULT_VOLUME = 0.5;
@@ -395,11 +497,12 @@ ${playlistItems.join("\n")}
 ];
 `;
 
-    fs.writeFileSync(configPath, content, "utf-8");
-    console.log(`   ✅ Đã cập nhật src/config/music.config.ts từ Neon DB (Bài đầu tiên: "${rows[0].title}").`);
-    return true;
+      fs.writeFileSync(configPath, content, "utf-8");
+      console.log(`   ✅ Đã cập nhật src/config/music.config.ts từ Neon DB (Bài đầu tiên: "${rows[0].title}").`);
+      return true;
+    });
   } catch (err) {
-    console.warn("   ⚠️ Không thể đồng bộ music.config.ts từ Neon DB:", err.message);
+    console.warn("   ⚠️ Không thể đồng bộ music.config.ts từ Neon DB sau nhiều lần thử:", err.message);
     return false;
   }
 }
