@@ -100,7 +100,7 @@ export async function getMusicPlaylistFromDatabase(): Promise<MusicTrack[] | nul
     const sql = neon(env.database.url);
     const rows = await sql`
       SELECT 
-        id, title, artist, r2_key, audio_url, cover_url, sort_order
+        id, title, artist, r2_key, audio_url, cover_url, sort_order, is_default
       FROM music_tracks
       WHERE is_active = true
       ORDER BY sort_order ASC, created_at ASC
@@ -119,6 +119,7 @@ export async function getMusicPlaylistFromDatabase(): Promise<MusicTrack[] | nul
         file,
         url: String(r.audio_url || ""),
         cover: String(r.cover_url || ""),
+        isDefault: Boolean(r.is_default),
       };
     });
   } catch (err) {

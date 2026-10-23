@@ -8,6 +8,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { usePathname } from "next/navigation";
 import {
   DEFAULT_TRACK_FILE,
   DEFAULT_VOLUME,
@@ -57,10 +58,83 @@ function resolveTrackAudioSrc(track?: MusicTrack): string {
   return "";
 }
 
+/**
+ * Tìm index chính xác của bài hát trong danh sách tracks dựa trên độ ưu tiên:
+ * 1. Khớp track ID (nếu có)
+ * 2. Khớp trực tiếp URL audioRef.current.src (bao gồm cả encoded và decoded filename)
+ * 3. Khớp tên file (activeFileName hoặc safeStorageGet("music_track_file"))
+ * 4. Index ưu tiên (nếu còn hợp lệ trong khoảng mảng)
+ * 5. Bài hát đánh dấu mặc định (isDefault === true) hoặc bài đầu tiên (index 0)
+ */
+function findMatchingTrackIndex(
+  tracks: MusicTrack[],
+  currentAudioSrc?: string | null,
+  activeFileName?: string | null,
+  activeTrackId?: string | null,
+  preferredIndex = 0
+): number {
+  if (!tracks || tracks.length === 0) return 0;
+
+  // 1. Khớp track ID
+  if (activeTrackId) {
+    const idxById = tracks.findIndex((t) => t.id && String(t.id) === String(activeTrackId));
+    if (idxById !== -1) return idxById;
+  }
+
+  // 2. Khớp trực tiếp audio.src đang phát trên trình duyệt
+  if (currentAudioSrc) {
+    const cleanSrc = currentAudioSrc.trim();
+    let decodedSrc = "";
+    try {
+      decodedSrc = decodeURIComponent(cleanSrc);
+    } catch {
+      decodedSrc = cleanSrc;
+    }
+
+    const idxBySrc = tracks.findIndex((t) => {
+      const targetSrc = resolveTrackAudioSrc(t);
+      if (targetSrc && (cleanSrc === targetSrc || cleanSrc.startsWith(targetSrc))) {
+        return true;
+      }
+      if (t.file) {
+        const encFile = encodeURIComponent(t.file);
+        if (cleanSrc.endsWith(encFile) || cleanSrc.includes(encFile)) {
+          return true;
+        }
+        if (decodedSrc.endsWith(t.file) || decodedSrc.includes(t.file)) {
+          return true;
+        }
+      }
+      return false;
+    });
+    if (idxBySrc !== -1) return idxBySrc;
+  }
+
+  // 3. Khớp theo filename đang hoạt động hoặc đã lưu
+  if (activeFileName) {
+    const lowerFile = activeFileName.trim().toLowerCase();
+    const idxByFile = tracks.findIndex(
+      (t) => t.file && t.file.trim().toLowerCase() === lowerFile
+    );
+    if (idxByFile !== -1) return idxByFile;
+  }
+
+  // 4. Index ưu tiên nếu nằm trong phạm vi mảng
+  if (preferredIndex >= 0 && preferredIndex < tracks.length) {
+    return preferredIndex;
+  }
+
+  // 5. Bài hát mặc định (isDefault) hoặc bài đầu tiên
+  const defaultIdx = tracks.findIndex((t) => t.isDefault);
+  return defaultIdx !== -1 ? defaultIdx : 0;
+}
+
 export function MusicPlayerProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastNonZeroVolumeRef = useRef<number>(DEFAULT_VOLUME);
   const isManuallyPausedRef = useRef<boolean>(false);
+  const hasInitializedDefaultRef = useRef<boolean>(false);
 
   const [playlist, setPlaylist] = useState<MusicTrack[]>(fallbackPlaylist);
   const [currentTrackIndex, setCurrentTrackIndex] = useState<number>(0);
@@ -82,6 +156,11 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
     const saved = safeStorageGet("music_repeat_mode") as RepeatMode | null;
     return saved === "off" || saved === "one" || saved === "all" ? saved : "all";
   });
+
+  // Luôn đảm bảo currentTrackIndexRef đồng bộ tuyệt đối với React state
+  useEffect(() => {
+    currentTrackIndexRef.current = currentTrackIndex;
+  }, [currentTrackIndex]);
 
   const toggleShuffle = useCallback(() => {
     setIsShuffle((prev) => {
@@ -114,7 +193,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
     document.body.style.overflow = isMobileModalOpen ? "hidden" : "";
   }, [isMobileModalOpen]);
 
-  // Tải danh sách nhạc từ API /api/music và khôi phục trạng thái từ localStorage
+  // Tải danh sách nhạc từ API /api/music và khôi phục trạng thái
   useEffect(() => {
     let isMounted = true;
 
@@ -131,26 +210,28 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       audioRef.current.volume = validVol;
     }
 
-    // Khởi tạo ngay bài hát đầu tiên ở hàng đầu để audio.src không bao giờ bị rỗng
-    const initialTrack = fallbackPlaylist[0];
-    if (audioRef.current && initialTrack && !audioRef.current.src) {
-      audioRef.current.src = resolveTrackAudioSrc(initialTrack);
-    }
+    // Khởi tạo bài hát ban đầu từ audio element hoặc storage (chỉ chạy một lần lúc khởi động)
+    if (!hasInitializedDefaultRef.current) {
+      const savedFile = safeStorageGet("music_track_file");
+      const savedIdxStr = safeStorageGet("music_track_index");
+      const savedIdx = savedIdxStr !== null ? parseInt(savedIdxStr, 10) : NaN;
 
-    const initTrackFromStorage = (tracks: MusicTrack[]) => {
-      // Bài hát ở hàng đầu tiên (index 0 / sort_order 1) luôn luôn là bài phát mặc định
-      const resolvedIndex = 0;
+      const initialIdx = findMatchingTrackIndex(
+        fallbackPlaylist,
+        audioRef.current?.src,
+        savedFile,
+        null,
+        !isNaN(savedIdx) ? savedIdx : 0
+      );
 
-      setCurrentTrackIndex(resolvedIndex);
-      currentTrackIndexRef.current = resolvedIndex;
-      const track = tracks[resolvedIndex];
-      if (track && audioRef.current) {
-        const targetSrc = resolveTrackAudioSrc(track);
-        if (audioRef.current.src !== targetSrc) {
-          audioRef.current.src = targetSrc;
-        }
+      setCurrentTrackIndex(initialIdx);
+      currentTrackIndexRef.current = initialIdx;
+
+      const initialTrack = fallbackPlaylist[initialIdx] || fallbackPlaylist[0];
+      if (audioRef.current && initialTrack && !audioRef.current.src) {
+        audioRef.current.src = resolveTrackAudioSrc(initialTrack);
       }
-    };
+    }
 
     const applyCustomOrder = (tracks: MusicTrack[]): MusicTrack[] => {
       try {
@@ -187,6 +268,36 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       }
     };
 
+    const syncTracksWithState = (tracks: MusicTrack[]) => {
+      setPlaylist(tracks);
+
+      // Nhận diện bài hát đang phát hoặc đã lưu để không bao giờ bị reset về bài 0
+      const audio = audioRef.current;
+      const currentSong = playlist[currentTrackIndexRef.current];
+      const activeFile = currentSong?.file || safeStorageGet("music_track_file");
+      const activeId = currentSong?.id;
+
+      const resolvedIndex = findMatchingTrackIndex(
+        tracks,
+        audio?.src,
+        activeFile,
+        activeId,
+        currentTrackIndexRef.current
+      );
+
+      setCurrentTrackIndex(resolvedIndex);
+      currentTrackIndexRef.current = resolvedIndex;
+
+      // Chỉ gán audio.src nếu chưa từng có src
+      if (audio && !audio.src) {
+        const track = tracks[resolvedIndex];
+        if (track) {
+          audio.src = resolveTrackAudioSrc(track);
+        }
+      }
+      hasInitializedDefaultRef.current = true;
+    };
+
     fetch("/api/music", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
@@ -194,17 +305,16 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
         const rawTracks =
           data && Array.isArray(data) && data.length > 0 ? data : fallbackPlaylist;
         // Ưu tiên thứ tự chuẩn trực tiếp từ Central SQL Database
-        setPlaylist(rawTracks);
-        initTrackFromStorage(rawTracks);
+        syncTracksWithState(rawTracks);
       })
       .catch(() => {
         if (!isMounted) return;
         const orderedFallback = applyCustomOrder(fallbackPlaylist);
-        setPlaylist(orderedFallback);
-        initTrackFromStorage(orderedFallback);
+        syncTracksWithState(orderedFallback);
       });
 
     // Tự động làm mới danh sách nhạc theo thời gian thực khi người dùng quay lại tab trình duyệt
+    // Đảm bảo nhận diện và bảo toàn nguyên vẹn bài hát đang phát
     const refreshPlaylistOnFocus = () => {
       fetch("/api/music", { cache: "no-store" })
         .then((res) => res.json())
@@ -212,13 +322,24 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
           if (!isMounted) return;
           if (Array.isArray(data) && data.length > 0) {
             setPlaylist((prevPlaylist) => {
-              const currentPlaying = prevPlaylist[currentTrackIndexRef.current];
-              if (currentPlaying) {
-                const newIdx = data.findIndex((t: MusicTrack) => t.file === currentPlaying.file);
-                if (newIdx !== -1) {
-                  setCurrentTrackIndex(newIdx);
-                  currentTrackIndexRef.current = newIdx;
-                }
+              const audio = audioRef.current;
+              const currentSong = prevPlaylist[currentTrackIndexRef.current];
+              const activeFile = currentSong?.file || safeStorageGet("music_track_file");
+              const activeId = currentSong?.id;
+
+              const newIdx = findMatchingTrackIndex(
+                data,
+                audio?.src,
+                activeFile,
+                activeId,
+                currentTrackIndexRef.current
+              );
+
+              setCurrentTrackIndex(newIdx);
+              currentTrackIndexRef.current = newIdx;
+              safeStorageSet("music_track_index", String(newIdx));
+              if (data[newIdx]?.file) {
+                safeStorageSet("music_track_file", data[newIdx].file);
               }
               return data;
             });
@@ -240,9 +361,40 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
     };
   }, []);
 
-  // Tự động phát nhạc:
+  // Đồng bộ trạng thái trực tiếp từ <audio> element khi chuyển tab / route (Overview ↔ Projects)
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (audio.currentTime > 0) {
+      setCurrentTime(audio.currentTime);
+    }
+    if (audio.duration && isFinite(audio.duration) && audio.duration > 0) {
+      setDuration(audio.duration);
+    }
+    setIsPlaying(!audio.paused && !audio.ended && audio.readyState > 0);
+
+    // Đảm bảo UI index luôn khớp với audio.src hiện tại khi vừa đổi route
+    if (audio.src && playlist.length > 0) {
+      const activeSong = playlist[currentTrackIndexRef.current];
+      const matchedIdx = findMatchingTrackIndex(
+        playlist,
+        audio.src,
+        activeSong?.file || safeStorageGet("music_track_file"),
+        activeSong?.id,
+        currentTrackIndexRef.current
+      );
+      if (matchedIdx !== currentTrackIndexRef.current) {
+        setCurrentTrackIndex(matchedIdx);
+        currentTrackIndexRef.current = matchedIdx;
+      }
+    }
+  }, [pathname, playlist]);
+
+  // Tự động phát nhạc lúc khởi động:
   // 1. Thử gọi audio.play() ngay khi vừa mở trang (nếu trình duyệt cho phép thì nhạc sẽ chạy liền).
   // 2. Nếu trình duyệt chặn do chính sách Autoplay Policy, tự động kích hoạt ngay khi người dùng có tương tác đầu tiên (click, chạm màn hình, cuộn chuột, nhấn phím).
+  // Tuyệt đối không tự động phát đè nếu người dùng đã chủ động bấm Tạm dừng (isManuallyPausedRef).
   useEffect(() => {
     const events = ["pointerdown", "touchstart", "click", "keydown", "wheel"] as const;
 
@@ -253,6 +405,10 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
     const tryPlayOnGesture = () => {
       const audio = audioRef.current;
       if (!audio || !audio.src) return;
+      if (isManuallyPausedRef.current) {
+        cleanup();
+        return;
+      }
 
       audio
         .play()
@@ -268,7 +424,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
 
     // Thử phát ngay lập tức khi mở web
     const audio = audioRef.current;
-    if (audio && audio.src) {
+    if (audio && audio.src && !isManuallyPausedRef.current) {
       audio
         .play()
         .then(() => {
@@ -286,7 +442,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
     return () => {
       cleanup();
     };
-  }, [playlist]);
+  }, []);
 
   const loadAndPlayTrack = useCallback(
     (index: number, autoPlay = true) => {
@@ -294,6 +450,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       if (!track || !audioRef.current) return;
 
       setCurrentTrackIndex(index);
+      currentTrackIndexRef.current = index;
       safeStorageSet("music_track_index", String(index));
       safeStorageSet("music_track_file", track.file);
 
@@ -321,7 +478,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
     if (!audio) return;
 
     if (!audio.src) {
-      loadAndPlayTrack(currentTrackIndex, true);
+      loadAndPlayTrack(currentTrackIndexRef.current, true);
       return;
     }
 
@@ -333,7 +490,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
         .then(() => setIsPlaying(true))
         .catch((err) => {
           console.warn("[MusicPlayer] Play failed, attempting reload:", err);
-          loadAndPlayTrack(currentTrackIndex, true);
+          loadAndPlayTrack(currentTrackIndexRef.current, true);
         });
     } else {
       isManuallyPausedRef.current = true;
@@ -341,7 +498,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       audio.pause();
       setIsPlaying(false);
     }
-  }, [currentTrackIndex, loadAndPlayTrack]);
+  }, [loadAndPlayTrack]);
 
   const getRandomIndex = useCallback((excludeIdx: number, length: number): number => {
     if (length <= 1) return 0;
@@ -356,25 +513,27 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
 
   const nextTrack = useCallback(() => {
     if (playlist.length === 0) return;
+    const currentIdx = currentTrackIndexRef.current;
     if (isShuffle && playlist.length > 1) {
-      const nextIdx = getRandomIndex(currentTrackIndex, playlist.length);
+      const nextIdx = getRandomIndex(currentIdx, playlist.length);
       loadAndPlayTrack(nextIdx, true);
     } else {
-      const nextIdx = (currentTrackIndex + 1) % playlist.length;
+      const nextIdx = (currentIdx + 1) % playlist.length;
       loadAndPlayTrack(nextIdx, true);
     }
-  }, [currentTrackIndex, playlist.length, isShuffle, getRandomIndex, loadAndPlayTrack]);
+  }, [playlist.length, isShuffle, getRandomIndex, loadAndPlayTrack]);
 
   const prevTrack = useCallback(() => {
     if (playlist.length === 0) return;
+    const currentIdx = currentTrackIndexRef.current;
     if (isShuffle && playlist.length > 1) {
-      const prevIdx = getRandomIndex(currentTrackIndex, playlist.length);
+      const prevIdx = getRandomIndex(currentIdx, playlist.length);
       loadAndPlayTrack(prevIdx, true);
     } else {
-      const prevIdx = (currentTrackIndex - 1 + playlist.length) % playlist.length;
+      const prevIdx = (currentIdx - 1 + playlist.length) % playlist.length;
       loadAndPlayTrack(prevIdx, true);
     }
-  }, [currentTrackIndex, playlist.length, isShuffle, getRandomIndex, loadAndPlayTrack]);
+  }, [playlist.length, isShuffle, getRandomIndex, loadAndPlayTrack]);
 
   const selectTrack = useCallback(
     (index: number) => {
@@ -396,7 +555,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
           return prevPlaylist;
         }
 
-        const currentSong = prevPlaylist[currentTrackIndex];
+        const currentSong = prevPlaylist[currentTrackIndexRef.current];
         const updated = [...prevPlaylist];
         const [moved] = updated.splice(startIndex, 1);
         updated.splice(endIndex, 0, moved);
@@ -406,7 +565,9 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
           const newIdx = updated.findIndex((t) => t.file === currentSong.file);
           if (newIdx !== -1) {
             setCurrentTrackIndex(newIdx);
+            currentTrackIndexRef.current = newIdx;
             safeStorageSet("music_track_index", String(newIdx));
+            safeStorageSet("music_track_file", currentSong.file);
           }
         }
 
@@ -426,7 +587,7 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
         return updated;
       });
     },
-    [currentTrackIndex]
+    []
   );
 
   const seekToPercent = useCallback(
@@ -479,13 +640,14 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
       return;
     }
 
-    if (repeatMode === "off" && !isShuffle && currentTrackIndex >= playlist.length - 1) {
+    const currentIdx = currentTrackIndexRef.current;
+    if (repeatMode === "off" && !isShuffle && currentIdx >= playlist.length - 1) {
       setIsPlaying(false);
       return;
     }
 
     nextTrack();
-  }, [repeatMode, isShuffle, currentTrackIndex, playlist.length, nextTrack]);
+  }, [repeatMode, isShuffle, playlist.length, nextTrack]);
 
   const lastUpdateRef = useRef<number>(0);
 
@@ -553,12 +715,15 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
             setDuration(audioRef.current.duration);
           }
         }}
-        onPlay={() => setIsPlaying(true)}
+        onPlay={() => {
+          setIsPlaying(true);
+          isManuallyPausedRef.current = false;
+        }}
         onPause={() => setIsPlaying(false)}
         onEnded={handleTrackEnded}
         onError={() => {
           const audio = audioRef.current;
-          const track = playlist[currentTrackIndex];
+          const track = playlist[currentTrackIndexRef.current] || playlist[currentTrackIndex];
           if (audio && track && track.file) {
             const r2Fallback = `${R2_PUBLIC_BASE}/music/${encodeURIComponent(track.file)}`;
             if (audio.src !== r2Fallback) {

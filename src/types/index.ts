@@ -36,12 +36,14 @@ export interface ProjectItem {
 }
 
 export interface MusicTrack {
+  id?: string;
   name: string;
   artist: string;
   file: string;
   url?: string;
   size?: number;
   cover?: string;
+  isDefault?: boolean;
 }
 
 export interface TikTokStatsResponse {

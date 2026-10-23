@@ -47,9 +47,9 @@ log_error() {
 
 # Kiểm tra kết nối SSH tới Homelab (Hỗ trợ phát hiện link xác thực Tailscale SSH hoặc chạy local trực tiếp)
 check_connection() {
-    # Nếu đang chạy trực tiếp trên Homelab (có docker socket hoặc file docker-compose.yml cùng thư mục)
-    if [ -e "/var/run/docker.sock" ] || [ -f "${PROJECT_ROOT}/docker-compose.yml" ]; then
-        if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
+    # Nếu đang chạy trực tiếp trên Homelab (địa chỉ IP của máy trùng với HOMELAB_HOST)
+    if ip -o addr show 2>/dev/null | grep -q "${HOMELAB_HOST}"; then
+        if [ -e "/var/run/docker.sock" ] && command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
             IS_LOCAL_HOST=true
             log_success "Đang thực thi trực tiếp trên máy chủ Homelab qua Docker engine."
             return 0
