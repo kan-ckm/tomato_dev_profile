@@ -2,11 +2,12 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useTabNavigation, NavTab } from "@/context/TabNavigationContext";
 import { cn } from "@/lib/utils";
 
 interface NavItemConfig {
   href: string;
+  tab: NavTab;
   label: string;
   icon: React.ReactNode;
 }
@@ -14,6 +15,7 @@ interface NavItemConfig {
 const NAV_ITEMS: NavItemConfig[] = [
   {
     href: "/",
+    tab: "overview",
     label: "Overview",
     icon: (
       <svg
@@ -31,6 +33,7 @@ const NAV_ITEMS: NavItemConfig[] = [
   },
   {
     href: "/projects",
+    tab: "projects",
     label: "Projects",
     icon: (
       <svg
@@ -49,20 +52,19 @@ const NAV_ITEMS: NavItemConfig[] = [
 ];
 
 export function BottomNav() {
-  const pathname = usePathname();
-  const router = useRouter();
+  const { activeTab, switchTab } = useTabNavigation();
 
-  const isActive = (href: string) => {
-    if (href === "/") return pathname === "/" || pathname === "/index.html";
-    return pathname.startsWith(href);
-  };
-
-  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    if (isActive(href)) {
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, tab: NavTab) => {
+    // Nếu click vào tab đang active -> cuộn mượt về đầu trang
+    if (activeTab === tab) {
       e.preventDefault();
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
+
+    // Chuyển tab tức thì 0ms, không reload, không gửi HTTP RSC request chặn luồng
+    e.preventDefault();
+    switchTab(tab);
   };
 
   return (
@@ -72,14 +74,14 @@ export function BottomNav() {
       className="bottom-nav fixed bottom-6 left-4 z-[9998] flex items-center gap-1.5 rounded-full border border-white/15 bg-black/70 p-1.5 shadow-[0_15px_35px_rgba(0,0,0,0.5),0_0_20px_rgba(255,255,255,0.06)] backdrop-blur-xl transition-all duration-300 md:left-1/2 md:-translate-x-1/2"
     >
       {NAV_ITEMS.map((item) => {
-        const active = isActive(item.href);
+        const active = activeTab === item.tab;
         return (
           <Link
             key={item.href}
             href={item.href}
             title={item.label}
             prefetch={true}
-            onClick={(e) => handleClick(e, item.href)}
+            onClick={(e) => handleClick(e, item.tab)}
             className={cn(
               "nav-item relative flex items-center gap-2 rounded-full px-3.5 py-2 font-display text-[0.8rem] font-semibold tracking-[0.03em] no-underline transition-all duration-200",
               active

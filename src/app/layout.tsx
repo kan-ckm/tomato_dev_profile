@@ -2,7 +2,14 @@ import type { Metadata, Viewport } from "next";
 import { profileConfig } from "@/config/profile.config";
 import { ClientShell } from "@/components/layout/ClientShell";
 import { env } from "@/lib/env";
+import {
+  getBioLinks,
+  getMediaShowcaseConfig,
+  getShowcaseProjects,
+} from "@/lib/cms";
 import "./globals.css";
+
+export const revalidate = 60;
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -33,7 +40,7 @@ export const metadata: Metadata = {
   },
   manifest: "/assets/favicon/site.webmanifest?v=2",
   openGraph: {
-    title: "TOMATODEVS — PROFILE",
+    title: "TOMATODEV — PROFILE",
     description: profileConfig.seo.description,
     url: "./",
     siteName: profileConfig.seo.siteName,
@@ -54,11 +61,17 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [links, mediaConfig, dynamicProjects] = await Promise.all([
+    getBioLinks(),
+    getMediaShowcaseConfig(),
+    getShowcaseProjects(),
+  ]);
+
   return (
     <html lang="en">
       <head>
@@ -78,7 +91,12 @@ export default function RootLayout({
         />
       </head>
       <body className="loaded">
-        <ClientShell>{children}</ClientShell>
+        <ClientShell
+          overviewData={{ links, mediaConfig }}
+          projectsData={dynamicProjects}
+        >
+          {children}
+        </ClientShell>
       </body>
     </html>
   );

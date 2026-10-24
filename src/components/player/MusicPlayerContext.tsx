@@ -366,13 +366,21 @@ export function MusicPlayerProvider({ children }: { children: React.ReactNode })
     const audio = audioRef.current;
     if (!audio) return;
 
+    // Chỉ cập nhật isPlaying nếu trạng thái thực sự thay đổi
+    const nextIsPlaying = !audio.paused && !audio.ended && audio.readyState > 0;
+    setIsPlaying((prev) => (prev !== nextIsPlaying ? nextIsPlaying : prev));
+
+    // Chỉ cập nhật currentTime nếu bị lệch đáng kể (> 1.5s) tránh kích hoạt re-render bão táp
     if (audio.currentTime > 0) {
-      setCurrentTime(audio.currentTime);
+      setCurrentTime((prev) =>
+        Math.abs(prev - audio.currentTime) > 1.5 ? audio.currentTime : prev
+      );
     }
     if (audio.duration && isFinite(audio.duration) && audio.duration > 0) {
-      setDuration(audio.duration);
+      setDuration((prev) =>
+        Math.abs(prev - audio.duration) > 0.5 ? audio.duration : prev
+      );
     }
-    setIsPlaying(!audio.paused && !audio.ended && audio.readyState > 0);
 
     // Đảm bảo UI index luôn khớp với audio.src hiện tại khi vừa đổi route
     if (audio.src && playlist.length > 0) {

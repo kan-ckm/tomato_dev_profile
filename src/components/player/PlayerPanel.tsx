@@ -394,31 +394,33 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
                 toggleRepeatMode();
               }}
               className={cn(
-                "relative flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center border-none bg-transparent transition-all duration-200 hover:scale-110",
+                "flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center border-none bg-transparent transition-all duration-200 hover:scale-110",
                 repeatMode !== "off"
-                  ? "text-accent drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]"
-                  : "text-muted hover:text-white"
+                  ? "text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.7)]"
+                  : "text-zinc-400/60 hover:text-white"
               )}
             >
-              <svg
-                className="h-[16px] w-[16px]"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="17 1 21 5 17 9" />
-                <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-                <polyline points="7 23 3 19 7 15" />
-                <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-              </svg>
-              {repeatMode === "one" && (
-                <span className="absolute -top-1.5 -right-1.5 flex h-3 w-3 items-center justify-center rounded-full bg-accent font-numeric text-[8px] font-black text-black">
-                  1
-                </span>
-              )}
+              <span className="relative inline-flex h-4 w-4 items-center justify-center">
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="17 1 21 5 17 9" />
+                  <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                  <polyline points="7 23 3 19 7 15" />
+                  <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                </svg>
+                {repeatMode === "one" && (
+                  <span className="pointer-events-none absolute -top-1 -right-1.5 flex h-3 w-3 items-center justify-center rounded-full bg-white font-numeric text-[8px] font-bold leading-none text-black shadow-sm ring-1 ring-black/40">
+                    1
+                  </span>
+                )}
+              </span>
             </button>
 
             {/* Volume Control (Hỗ trợ lăn chuột tăng/giảm âm lượng) */}

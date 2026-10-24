@@ -297,6 +297,7 @@ export async function invalidateMusicPlaylistCache(): Promise<void> {
  * Đọc danh sách Bio Links từ L1 RAM hoặc L2 Redis
  */
 export async function getCachedBioLinks(): Promise<BioLink[] | null> {
+  if (process.env.NEXT_PHASE === "phase-production-build") return null;
   const l1List = getL1<BioLink[]>(REDIS_KEYS.CMS_BIO_LINKS);
   if (l1List && Array.isArray(l1List) && l1List.length > 0) {
     return l1List;
@@ -328,6 +329,8 @@ export async function setCachedBioLinks(links: BioLink[]): Promise<void> {
   memoryBioLinksFallback = links;
   setL1(REDIS_KEYS.CMS_BIO_LINKS, links);
 
+  if (process.env.NEXT_PHASE === "phase-production-build") return;
+
   const redis = getRedisClient();
   if (redis) {
     try {
@@ -342,6 +345,7 @@ export async function setCachedBioLinks(links: BioLink[]): Promise<void> {
  * Đọc cấu hình Media Showcase (GIF/Video) từ L1 RAM hoặc L2 Redis
  */
 export async function getCachedMediaShowcase(): Promise<MediaBlockConfig | null> {
+  if (process.env.NEXT_PHASE === "phase-production-build") return null;
   const l1 = getL1<MediaBlockConfig>(REDIS_KEYS.CMS_MEDIA_SHOWCASE);
   if (l1 && typeof l1 === "object" && l1.src) {
     return l1;
@@ -372,6 +376,8 @@ export async function setCachedMediaShowcase(config: MediaBlockConfig): Promise<
 
   memoryMediaFallback = config;
   setL1(REDIS_KEYS.CMS_MEDIA_SHOWCASE, config);
+
+  if (process.env.NEXT_PHASE === "phase-production-build") return;
 
   const redis = getRedisClient();
   if (redis) {

@@ -7,7 +7,11 @@ import { PlayerPanel } from "./PlayerPanel";
 import { VinylDisc } from "./VinylDisc";
 import { cn } from "@/lib/utils";
 
-export function FloatingPlayer() {
+interface FloatingPlayerProps {
+  forcedMini?: boolean;
+}
+
+export function FloatingPlayer({ forcedMini }: FloatingPlayerProps = {}) {
   const pathname = usePathname();
   const {
     currentTrack,
@@ -28,7 +32,9 @@ export function FloatingPlayer() {
 
   // Trên trang /projects hoặc /clock, bật chế độ mini-player-mode cho Desktop
   const isMiniPlayerPage =
-    pathname.startsWith("/projects") || pathname.startsWith("/clock");
+    forcedMini !== undefined
+      ? forcedMini
+      : pathname.startsWith("/projects") || pathname.startsWith("/clock");
 
   const stopAutoCollapse = useCallback(() => {
     if (autoCollapseTimerRef.current) {

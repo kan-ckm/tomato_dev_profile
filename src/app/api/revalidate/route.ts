@@ -15,8 +15,9 @@ export async function POST(req: NextRequest) {
     // Invalidate Dual-Layer Redis + L1 RAM cache
     await invalidateCmsCache();
 
-    // Revalidate home page path
+    // Revalidate home page path and projects path
     revalidatePath("/");
+    revalidatePath("/projects");
 
     return NextResponse.json({
       revalidated: true,

@@ -144,31 +144,33 @@ export function MobilePlaylistModal() {
               }
               onClick={toggleRepeatMode}
               className={cn(
-                "relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border transition-all",
+                "flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border transition-all",
                 repeatMode !== "off"
-                  ? "border-accent/40 bg-accent/20 text-accent shadow-[0_0_10px_rgba(255,255,255,0.2)]"
-                  : "border-white/10 bg-white/[0.04] text-muted hover:text-white"
+                  ? "border-white/40 bg-white/20 text-white shadow-[0_0_10px_rgba(255,255,255,0.3)]"
+                  : "border-white/10 bg-white/[0.04] text-zinc-400/60 hover:text-white"
               )}
             >
-              <svg
-                className="h-3.5 w-3.5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="17 1 21 5 17 9" />
-                <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-                <polyline points="7 23 3 19 7 15" />
-                <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-              </svg>
-              {repeatMode === "one" && (
-                <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-accent font-numeric text-[8px] font-black text-black">
-                  1
-                </span>
-              )}
+              <span className="relative inline-flex h-3.5 w-3.5 items-center justify-center">
+                <svg
+                  className="h-3.5 w-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="17 1 21 5 17 9" />
+                  <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                  <polyline points="7 23 3 19 7 15" />
+                  <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                </svg>
+                {repeatMode === "one" && (
+                  <span className="pointer-events-none absolute -top-1 -right-1.5 flex h-3 w-3 items-center justify-center rounded-full bg-white font-numeric text-[8px] font-bold leading-none text-black shadow-sm ring-1 ring-black/40">
+                    1
+                  </span>
+                )}
+              </span>
             </button>
 
             {/* Close Modal Button */}

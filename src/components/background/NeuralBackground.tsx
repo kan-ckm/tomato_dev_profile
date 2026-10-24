@@ -31,15 +31,19 @@ export function NeuralBackground() {
     // Cấu hình mạng lưới linh hoạt theo kích thước màn hình
     const getNodeConfig = (w: number) => {
       if (w <= 768) {
-        // Mobile
-        return { count: 85, maxDist: 110, mouseR: 140, lineAlphaFactor: 0.24 };
+        // Mobile: tăng mật độ hạt và giữ hiệu năng mượt mà
+        return { count: 140, maxDist: 115, mouseR: 150, lineAlphaFactor: 0.22 };
       }
       if (w <= 1024) {
         // Tablet / Small screen
-        return { count: 150, maxDist: 145, mouseR: 180, lineAlphaFactor: 0.26 };
+        return { count: 240, maxDist: 145, mouseR: 180, lineAlphaFactor: 0.24 };
       }
-      // Laptop & Desktop màn hình lớn: tăng số lượng nơ-ron dày đặc và sinh động
-      return { count: 280, maxDist: 175, mouseR: 240, lineAlphaFactor: 0.28 };
+      if (w <= 1600) {
+        // Laptop & Desktop tiêu chuẩn: tăng số lượng nơ-ron dày đặc và liên kết phong phú
+        return { count: 420, maxDist: 175, mouseR: 240, lineAlphaFactor: 0.25 };
+      }
+      // Màn hình lớn / 2K / 4K / Ultrawide: mạng lưới nơ-ron dày đặc toàn diện
+      return { count: 550, maxDist: 185, mouseR: 260, lineAlphaFactor: 0.24 };
     };
 
     let cfg = getNodeConfig(width);
@@ -174,18 +178,26 @@ export function NeuralBackground() {
 
       // Vẽ các sợi dây liên kết thần kinh giữa các nút gần nhau
       ctx.lineWidth = 0.85;
+      const maxDist = cfg.maxDist;
+      const maxDistSq = maxDist * maxDist;
+      const mouseR = cfg.mouseR;
+      const mouseRSq = mouseR * mouseR;
+      const lineAlphaFactor = cfg.lineAlphaFactor;
+
       for (let i = 0; i < totalNodes; i++) {
         const n1 = nodes[i];
         for (let j = i + 1; j < totalNodes; j++) {
           const n2 = nodes[j];
           const dx = n2.x - n1.x;
+          if (dx > maxDist || dx < -maxDist) continue;
+
           const dy = n2.y - n1.y;
+          if (dy > maxDist || dy < -maxDist) continue;
 
-          if (Math.abs(dx) > cfg.maxDist || Math.abs(dy) > cfg.maxDist) continue;
-
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < cfg.maxDist) {
-            const alpha = (1 - dist / cfg.maxDist) * cfg.lineAlphaFactor;
+          const distSq = dx * dx + dy * dy;
+          if (distSq < maxDistSq) {
+            const dist = Math.sqrt(distSq);
+            const alpha = (1 - dist / maxDist) * lineAlphaFactor;
             ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
             ctx.beginPath();
             ctx.moveTo(n1.x, n1.y);
@@ -197,16 +209,19 @@ export function NeuralBackground() {
         // Kết nối các nút với trỏ chuột
         if (mouse.active) {
           const dxM = n1.x - mouse.x;
-          const dyM = n1.y - mouse.y;
-          if (Math.abs(dxM) < cfg.mouseR && Math.abs(dyM) < cfg.mouseR) {
-            const distM = Math.sqrt(dxM * dxM + dyM * dyM);
-            if (distM < cfg.mouseR) {
-              const alphaM = (1 - distM / cfg.mouseR) * 0.46;
-              ctx.strokeStyle = `rgba(255, 255, 255, ${alphaM})`;
-              ctx.beginPath();
-              ctx.moveTo(mouse.x, mouse.y);
-              ctx.lineTo(n1.x, n1.y);
-              ctx.stroke();
+          if (dxM < mouseR && dxM > -mouseR) {
+            const dyM = n1.y - mouse.y;
+            if (dyM < mouseR && dyM > -mouseR) {
+              const distSqM = dxM * dxM + dyM * dyM;
+              if (distSqM < mouseRSq) {
+                const distM = Math.sqrt(distSqM);
+                const alphaM = (1 - distM / mouseR) * 0.46;
+                ctx.strokeStyle = `rgba(255, 255, 255, ${alphaM})`;
+                ctx.beginPath();
+                ctx.moveTo(mouse.x, mouse.y);
+                ctx.lineTo(n1.x, n1.y);
+                ctx.stroke();
+              }
             }
           }
         }
