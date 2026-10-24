@@ -400,7 +400,8 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
                   : "text-zinc-400/60 hover:text-white"
               )}
             >
-              <span className="relative inline-flex h-4 w-4 items-center justify-center">
+              {repeatMode === "one" ? (
+                // Icon chuẩn Repeat1 (Lucide) - Số 1 nằm gọn và cân đối ngay bên trong vòng lặp theo đúng tỉ lệ stroke
                 <svg
                   className="h-4 w-4"
                   viewBox="0 0 24 24"
@@ -410,17 +411,28 @@ export function PlayerPanel({ className, onUserInteraction }: PlayerPanelProps) 
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
-                  <polyline points="17 1 21 5 17 9" />
-                  <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-                  <polyline points="7 23 3 19 7 15" />
-                  <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                  <path d="m17 2 4 4-4 4" />
+                  <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+                  <path d="m7 22-4-4 4-4" />
+                  <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+                  <path d="M11 10h1v4" strokeWidth="2.4" />
                 </svg>
-                {repeatMode === "one" && (
-                  <span className="pointer-events-none absolute -top-1 -right-1.5 flex h-3 w-3 items-center justify-center rounded-full bg-white font-numeric text-[8px] font-bold leading-none text-black shadow-sm ring-1 ring-black/40">
-                    1
-                  </span>
-                )}
-              </span>
+              ) : (
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m17 2 4 4-4 4" />
+                  <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+                  <path d="m7 22-4-4 4-4" />
+                  <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+                </svg>
+              )}
             </button>
 
             {/* Volume Control (Hỗ trợ lăn chuột tăng/giảm âm lượng) */}
