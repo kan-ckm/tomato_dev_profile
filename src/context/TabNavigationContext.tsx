@@ -40,7 +40,7 @@ export function TabNavigationProvider({
     if (typeof window !== "undefined" && window.location.pathname !== targetUrl) {
       window.history.pushState(null, "", targetUrl);
       document.title =
-        tab === "projects" ? "TOMATODEVS — MY PROJECTS" : "TOMATODEVS — PROFILE";
+        tab === "projects" ? "TOMATODEV — MY PROJECTS" : "TOMATODEV — PROFILE";
     }
   }, []);
 
@@ -51,7 +51,7 @@ export function TabNavigationProvider({
       const tab: NavTab = p.startsWith("/projects") ? "projects" : "overview";
       setActiveTab(tab);
       document.title =
-        tab === "projects" ? "TOMATODEVS — MY PROJECTS" : "TOMATODEVS — PROFILE";
+        tab === "projects" ? "TOMATODEV — MY PROJECTS" : "TOMATODEV — PROFILE";
     };
 
     window.addEventListener("popstate", handlePopState);

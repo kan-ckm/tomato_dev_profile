@@ -4,14 +4,14 @@ export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "TOMATODEV — MY PROJECTS",
-  description: "Explore the projects and creations of TomatoDevs. Member of Redre.",
+  description: "Explore the projects and creations of TomatoDev. Member of Redre.",
   openGraph: {
-    title: "TOMATODEVS — MY PROJECTS",
-    description: "Explore the projects and creations of TomatoDevs. Member of Redre.",
+    title: "TOMATODEV — MY PROJECTS",
+    description: "Explore the projects and creations of TomatoDev. Member of Redre.",
   },
   twitter: {
-    title: "TOMATODEVS — MY PROJECTS",
-    description: "Explore the projects and creations of TomatoDevs. Member of Redre.",
+    title: "TOMATODEV — MY PROJECTS",
+    description: "Explore the projects and creations of TomatoDev. Member of Redre.",
   },
 };
 
