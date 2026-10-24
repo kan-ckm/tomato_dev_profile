@@ -55,7 +55,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "TOMATODEVS — PROFILE",
+    title: "TOMATODEV — PROFILE",
     description: profileConfig.seo.description,
     images: [profileConfig.seo.ogImage],
   },
