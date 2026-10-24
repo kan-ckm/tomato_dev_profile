@@ -6,6 +6,8 @@ services:
     image: redis:7.4-alpine
     container_name: tomatodevs-redis
     restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
     ports:
       - "127.0.0.1:6379:6379"
     command: >
@@ -32,6 +34,8 @@ services:
     image: hiett/serverless-redis-http:latest
     container_name: tomatodevs-redis-http
     restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.5
     ports:
       - "127.0.0.1:8079:80"
     environment:
@@ -52,6 +56,8 @@ services:
     image: tomatodevs/profile-app:latest
     container_name: tomatodevs-profile
     restart: unless-stopped
+    mem_limit: 768m
+    cpus: 1.5
     ports:
       - "127.0.0.1:3000:3000"
     env_file:
@@ -86,8 +92,11 @@ services:
     image: nginx:1.27-alpine
     container_name: tomatodevs-nginx
     restart: unless-stopped
+    mem_limit: 256m
+    cpus: 1.0
     ports:
-      - "${NGINX_HTTP_PORT:-8080}:80"
+      - "127.0.0.1:${NGINX_HTTP_PORT:-8080}:80"
+      - "100.119.185.5:${NGINX_HTTP_PORT:-8080}:80"
     volumes:
       - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
@@ -107,6 +116,8 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: tomatodevs-tunnel
     restart: unless-stopped
+    mem_limit: 256m
+    cpus: 0.5
     profiles:
       - tunnel
     command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-}
